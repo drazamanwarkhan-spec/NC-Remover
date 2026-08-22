@@ -1,0 +1,1457 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DSU Plan of Study Audit System - Stable Tabs & Cohort Mapping</title>
+<style>
+:root{--navy:#073b67;--blue:#0b70b7;--light:#f4f7fb;--border:#d9e2ec;--green:#0f8b5f;--red:#c62828;--amber:#a66a00;--ink:#17212b}*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--light);color:var(--ink)}header{background:linear-gradient(135deg,#06345c,#0b70b7);color:white;padding:22px 28px}header h1{margin:0 0 6px;font-size:24px}header p{margin:0;opacity:.9}.wrap{max-width:1500px;margin:auto;padding:18px}.toolbar,.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600}.primary{background:var(--blue);color:#fff}.secondary{background:#eaf1f7;color:#17415f}.danger{background:#ffe8e8;color:#a51f1f}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab{padding:10px 16px;border:1px solid var(--border);background:white;border-radius:9px;cursor:pointer;font-weight:700}.tab.active{background:var(--navy);color:#fff}.grid{display:grid;grid-template-columns:360px 1fr;gap:14px}.student-list{max-height:600px;overflow:auto}.student{padding:10px;border-bottom:1px solid var(--border);cursor:pointer}.student:hover,.student.active{background:#edf6ff}.muted{color:#64748b;font-size:13px}.pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;margin-left:4px}.p2023{background:#e7eef7;color:#1d4d7a}.pF26{background:#e8f7ee;color:#146c45}.p2025{background:#fff2d9;color:#8a5a00}.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{padding:12px 14px;border:1px solid var(--border);border-radius:10px;min-width:110px}.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:#64748b}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:13px}th{background:#f2f6fa;position:sticky;top:0}.status{font-weight:800}.ok{color:var(--green)}.nc{color:var(--red)}.extra{color:var(--amber)}.note{background:#fff8df;border:1px solid #eed68a;padding:10px;border-radius:8px;font-size:13px}.hidden{display:none}.drop{border:2px dashed #9fb6c9;border-radius:10px;padding:16px;text-align:center}.small{font-size:12px}.search{padding:9px 11px;border:1px solid var(--border);border-radius:8px;min-width:220px}.select{padding:9px;border:1px solid var(--border);border-radius:8px}.footer{font-size:12px;color:#64748b;margin-top:14px}.badge{font-size:11px;padding:3px 6px;border-radius:5px;background:#eef2f7}.empty{padding:40px;text-align:center;color:#64748b}.row-actions{display:flex;gap:8px;flex-wrap:wrap}.extraBox{margin-top:16px;border:1px solid #f0d6a2;border-radius:10px;overflow:hidden}.extraBox h3{margin:0;padding:10px 12px;background:#fff7e8;font-size:14px}.ncBox{margin-top:16px;border:1px solid #f0b8b8;border-radius:10px;overflow:hidden}.ncBox h3{margin:0;padding:10px 12px;background:#fdecec;font-size:14px;color:#8a1c1c}.planVersion{font-size:13px;color:#334155}.course-code{font-family:Consolas,monospace;font-weight:700}.iconbtn{border:1px solid var(--border);background:#fff;border-radius:7px;padding:6px 9px;cursor:pointer}.editcell{width:100%;padding:7px;border:1px solid var(--border);border-radius:6px}.reportTitle{font-size:18px;font-weight:700;margin:0 0 4px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.student-list{max-height:300px}}
+</style></head><body>
+<header><h1>DSU Plan of Study & Student Course Audit System</h1><p>Checks student enrolment/offering data against the applicable Plan of Study and flags courses outside the plan, and plan courses that were not offered (NC).</p></header>
+<div class="wrap">
+<div class="toolbar"><div class="drop" id="drop"><b>Upload Student Enrollment / Offering File</b><div class="small">Excel supported: .xls and .xlsx. The app automatically detects Registration Number, Student Name, Program, Class/Section, Course Code, Course Title, Credit Hours, Semester and Academic Status. CSV/TSV also supported.</div><input id="file" type="file" accept=".xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn secondary" id="sampleBtn">Download CSV Template</button><button class="btn primary" id="exportBtn">Download Offered Course Report</button><button class="btn secondary" id="exportCsvBtn">Download CSV</button><button class="btn secondary" id="exportXlsxBtn">Download Excel Report</button><button class="btn danger" id="clearBtn">Clear Data</button><button class="btn secondary" id="excelPsrnBtn">Download Excel PSRN-style Report</button><button class="btn primary" id="uploadPlanBtn">Upload Plan of Study</button><input id="planUploadMain" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.json" style="display:none"><button class="btn secondary" id="planManagerBtn">Plan & Series Manager</button></div>
+<div class="toolbar"><div class="drop" id="dropResult"><b>Upload Result / Grade Sheet (PSRN)</b><div class="small">Accepts the university's Provisional Semester Result Notification as PDF, or an Excel/CSV export with Registration Number, Course Code, Grade, SGPA, CGPA, Credit Hours Completed and Remarks columns. <b>No PSRN is preloaded.</b> Upload the PSRN PDF/Excel/CSV only when you want to use result data.</div><input id="fileResult" type="file" accept=".pdf,.xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn primary" id="exportResultCsvBtn">Download Result Report (CSV)</button><button class="btn secondary" id="exportResultHtmlBtn">Download PSRN-style Report (HTML)</button><button class="btn danger" id="clearResultBtn">Clear PSRN Data</button></div>
+<div class="card note"><b>Data Scope:</b> Only students whose uploaded Program/Degree is recognized as BBA, BS-AF, BS-BAP or BS-FinTech are displayed. All other and blank/unknown programs are excluded at import. Students from all other programs are automatically excluded from the audit.<br><br><b>Cohort tagging:</b> BBA212, BBA221, BBA222 and BS-AF 212, 221, 222 are explicitly assigned to the 2021 Roadmap. <br><br><b>Series / Plan Rules:</b> For BBA, BS-BAP and BS-AF &mdash; series <b>231, 232, 241</b> use the <b>2023</b> Plan of Study; series <b>242, 251, 252</b> use the <b>2025</b> Plan of Study; series <b>261 onward</b> use the <b>Fall 2026</b> Plan of Study. <b>BS-FinTech</b> starts from <b>FIN261</b> and follows the <b>Fall 2026</b> Plan of Study for all series. Only courses found in the uploaded enrollment/offering data are displayed in the "Offered Courses" table. Each offered course is checked against the student's applicable Plan of Study using Course ID (and Course Name as a fallback) as the matching key. <b>IN PLAN</b> = the offered course is found in the applicable plan; <b>ELECTIVE SLOT</b> = it fills an elective placeholder for that semester; <b>ELECTIVE (POOL)</b> = it matches a course from the program's official elective pool (per the Annex electives list) even though it was offered in a different semester than the plan's generic Elective-I/II slot; <b>NOT IN PLAN</b> = the offered course is not part of the applicable plan and not in its elective pool. A second table, <b>Plan Courses Not Offered (NC)</b>, lists any required (non-elective) course from the Plan of Study for a semester the student has data in, that was not found among the uploaded offered courses for that semester &mdash; these are marked <b>NC</b>. Electives are never marked NC since they are optional; a separate <b>Electives Not Offered</b> tab instead lists, informationally, which pool electives were not offered/taken by anyone currently in view.<br><br><b>Legacy series (before 231):</b> cohorts such as 201/211/212/221/222 pre-date the 2023 Plan of Study documents loaded into this app. They're automatically matched to the closest available reference &mdash; the <b>2023</b> Plan &mdash; so the audit still runs, but treat NOT-IN-PLAN / NC results for these series as indicative rather than exact.</div>
+<div class="tabs" id="tabs"></div>
+<div class="toolbar"><input class="search" id="studentSearch" placeholder="Search student ID / name / series"><select class="select" id="seriesFilter"><option value="">All series</option></select><select class="select" id="planFilter"><option value="">All plans</option><option value="2021">2021 Roadmap Plan</option><option value="2023">2023 Plan</option><option value="2025">2025 Plan</option><option value="F26">Fall 2026 Plan</option></select><span class="muted" id="rowCount"></span></div>
+<div id="manager" class="card hidden">
+<div class="section-title"><div><h2 style="margin:0">Plan of Study & Series Manager</h2><div class="muted">Upload plan data, edit cohort-to-plan rules, add/remove courses, and download the plan template.</div></div><button class="btn secondary" id="closeManager">Close</button></div>
+<div class="toolbar" style="padding:0;border:0;box-shadow:none;margin-bottom:12px"><div class="drop"><b>Upload Plan of Study Data</b><div class="small">Supported: Excel (.xlsx/.xls), CSV, TSV or JSON. Columns for Excel/CSV/TSV: Program, Plan, Semester, Course Code, Course Name, CH. Plan column accepts: 2023, 2025, or Fall 2026 / F26 / 2026.</div><input id="planFile" type="file" accept=".xls,.xlsx,.csv,.tsv,.txt,.json" style="margin-top:9px"></div><button class="btn secondary" id="planTemplateBtn">Download Plan Template</button><button class="btn primary" id="downloadPlansBtn">Download Current Plans</button></div>
+<div class="card" style="margin:0 0 12px"><h3 style="margin-top:0">Enter Plan of Study Manually</h3><div class="small muted">No file? Type or paste plan rows directly &mdash; same format as the CSV/TSV template (or paste a JSON export). One course per line: <span class="course-code">Program,Plan,Semester,Course Code,Course Name,CH</span></div><textarea id="planPasteBox" class="editcell" rows="6" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px" placeholder="Program,Plan,Semester,Course Code,Course Name,CH&#10;BBA,2023,1,MS-1801,Example Course,3&#10;BS-AF,Fall 2026,1,HU-1204,Islamic Studies / Ethics,3"></textarea><div class="toolbar" style="padding:0;border:0;box-shadow:none;margin-top:8px"><button class="btn primary" id="planPasteBtn">Load Pasted Data</button><button class="btn secondary" id="planPasteClearBtn">Clear Box</button><span class="small muted">Rows are merged into the plans above (matching Course Code rows are updated, new ones are added).</span></div></div>
+<div class="card" style="margin:0 0 12px"><h3 style="margin-top:0">Series / Plan Rules</h3><div class="small muted">Edit the exact series values used to select the 2023, 2025 or Fall 2026 plan. One row can contain multiple comma-separated series values. Any series not explicitly listed here is assigned automatically by its numeric cohort (231/232/241&rarr;2023, 242/251/252&rarr;2025, 261 and above&rarr;Fall 2026).</div><div style="overflow:auto;margin-top:8px"><table><thead><tr><th>Program</th><th>Plan</th><th>Series</th><th>Action</th></tr></thead><tbody id="rulesBody"></tbody></table></div></div>
+<div class="card" style="margin:0"><h3 style="margin-top:0">Edit Plan Courses</h3><div class="toolbar" style="padding:0;border:0;box-shadow:none"><select class="select" id="editProgram"><option>BBA</option><option>BS-AF</option><option>BS-BAP</option><option>BS-Fin</option></select><select class="select" id="editPlan"><option value="2023">2023</option><option value="2025">2025</option><option value="F26">Fall 2026</option></select><select class="select" id="editSemester"></select><button class="btn primary" id="addCourseBtn">Add Course</button></div><div style="overflow:auto;max-height:520px"><table><thead><tr><th>Semester</th><th>Code</th><th>Course Name</th><th>CH</th><th>Action</th></tr></thead><tbody id="coursesBody"></tbody></table></div></div>
+<div id="managerMsg" class="note hidden" style="margin-top:12px"></div>
+</div>
+<div id="app"></div><div class="footer">Plan data starts with the built-in reference plans and can be replaced at any time by uploading your own Plan of Study. Student enrollment data is accepted directly from Excel (.xls/.xlsx). Cohort rules: 231/232/241 &rarr; 2023 Plan; 242/251/252 &rarr; 2025 Plan; 261 onward &rarr; Fall 2026 Plan; BS-FinTech starts at FIN261 and follows the Fall 2026 Plan.</div>
+</div>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}</script>
+<script>
+const PLAN_VERSIONS=['2019','2021','2023','2025','F26'];
+const PLAN_LABELS={'2019':'2019 BBA Plan (Fall-2019 onward)','2021':'2021 Roadmap Plan','2023':'2023 Plan','2025':'2025 Plan','F26':'Fall 2026 Plan'};
+const PLAN_SHORT={'2019':'2019','2021':'2021','2023':'2023','2025':'2025','F26':'Fall 26'};
+const PLANS = {"BBA": {"2019": {"1": [{"code":"MS-1301","name":"Introduction to Computing","ch":3},{"code":"MS-1401","name":"Microeconomics","ch":3},{"code":"HU-2201/HU-1802","name":"Islamic Studies / Ethics","ch":2},{"code":"HU-2101","name":"Pakistan Studies","ch":2},{"code":"HU-1005","name":"Freshman English","ch":3},{"code":"BS-1401","name":"Business Mathematics","ch":3}],"2": [{"code":"MS-1101","name":"Principles of Management","ch":3},{"code":"MS-1201","name":"Principles of Accounting","ch":3},{"code":"MS-1402","name":"Macroeconomics","ch":3},{"code":"HU-1003","name":"Introduction to Psychology & Human Behavior","ch":3},{"code":"HU-1004","name":"Sociology","ch":3},{"code":"HU-2001","name":"Oral Communication & Presentation skills","ch":3}],"3": [{"code":"MS-2102","name":"Business Law","ch":3},{"code":"MS-2202","name":"Financial Accounting","ch":3},{"code":"MS-2403","name":"Development Economics","ch":3},{"code":"HU-2502","name":"Critical Thinking","ch":3},{"code":"HU-4001","name":"Business Communication","ch":3},{"code":"BS-2401","name":"Business Statistics","ch":3}],"4": [{"code":"MS-2001","name":"Principles of Marketing","ch":3},{"code":"MS-2103","name":"Organizational Behavior","ch":3},{"code":"MS-3204","name":"Introduction to Business Finance","ch":3},{"code":"MS-2404","name":"Economic Issues of Pakistan","ch":3},{"code":"HU-2010","name":"Academic Writing","ch":3},{"code":"BS-3401","name":"Statistical Inference","ch":3}],"5": [{"code":"MS-3002","name":"Marketing Management","ch":3},{"code":"MS-3104","name":"Human Resource Management","ch":3},{"code":"MS-2203","name":"Cost Accounting","ch":3},{"code":"MS-3302","name":"Management Information System","ch":3},{"code":"MS-3501","name":"Production & Operations Management","ch":3},{"code":"MS-3601","name":"Business Research Methods","ch":3}],"6": [{"code":"MS-3003","name":"Consumer Behavior","ch":3},{"code":"MS-4205","name":"Financial Management","ch":3},{"code":"MS-3105","name":"Entrepreneurship & Small Business Management","ch":3},{"code":"MS-3303","name":"E-Business","ch":3},{"code":"MS-3602","name":"Data Analytics","ch":3},{"code":"MS-3710","name":"Business Ethics","ch":3}],"7": [{"code":"MS-4106","name":"Professional Development","ch":3},{"code":"MS-4206","name":"Financial Markets & Institutions","ch":3},{"code":"MS-4711","name":"Foreign Language","ch":3},{"code":"MS-4000","name":"Specialization – I","ch":3},{"code":"MS-4000","name":"Specialization – II","ch":3},{"code":"MS-4107","name":"Business Policy","ch":3}],"8": [{"code":"MS-4603","name":"Research Project","ch":6},{"code":"MS-4000","name":"Specialization – III","ch":3},{"code":"MS-4000","name":"Specialization – IV","ch":3}]},"2023": {"1": [{"code": "MS-1801", "name": "Islamic Studies / Ethics", "ch": 3}, {"code": "MS-1802", "name": "Functional English", "ch": 3}, {"code": "MS-1803", "name": "Peace Studies and Human Rights", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "MS-1804", "name": "Business Mathematics and Statistics", "ch": 3}, {"code": "MS-1302", "name": "Computer Skills", "ch": 3}, {"code": "MS-1805", "name": "Pakistan Studies", "ch": 3}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-1001", "name": "Principles of Marketing", "ch": 3}], "3": [{"code": "MS-2806", "name": "Statistical Inferences", "ch": 3}, {"code": "MS-2807", "name": "Expository English", "ch": 3}, {"code": "MS-2808", "name": "Industrial Revolution", "ch": 3}, {"code": "MS-2101", "name": "Human Resource Management", "ch": 3}, {"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}], "4": [{"code": "MS-2809", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 3}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 3}, {"code": "MS-2203", "name": "Cost Accounting", "ch": 3}, {"code": "MS-2102", "name": "Business Law", "ch": 3}], "5": [{"code": "MS-3101", "name": "Personal Development", "ch": 3}, {"code": "MS-3401", "name": "Economic Issues of Pakistan", "ch": 3}, {"code": "MS-3503", "name": "Supply Chain Management", "ch": 3}, {"code": "MS-3601", "name": "Business Research Methods", "ch": 3}, {"code": "MS-3002", "name": "Marketing Management", "ch": 3}, {"code": "MS-3216", "name": "Fundamentals of Corporate Governance", "ch": 3}], "6": [{"code": "MS-3102", "name": "Organizational Behavior and Technological Advancements", "ch": 3}, {"code": "MS-3303", "name": "E-Business", "ch": 3}, {"code": "MS-3602", "name": "Data Analytics", "ch": 3}, {"code": "MS-3217", "name": "Financial Management", "ch": 3}, {"code": "MS-3504", "name": "Project Management", "ch": 3}, {"code": "MS-3004", "name": "Consumer Behavior Analysis", "ch": 3}], "7": [{"code": "MS-4301", "name": "Information Management & Strategy", "ch": 3}, {"code": "MS-4113", "name": "Professional Development & Corporate Skills", "ch": 3}, {"code": "MS-4206", "name": "Financial Markets & Institutions", "ch": 3}, {"code": "MS-4114", "name": "Business Strategy", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-I", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-II", "ch": 3}], "8": [{"code": "MS-4115", "name": "International Business", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-III", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-IV", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}, "2025": {"1": [{"code": "HU-1204", "name": "Islamic Studies / Ethics", "ch": 3}, {"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "MS-1302", "name": "Computer Skills", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "BS-1021", "name": "Business Mathematics and Statistics", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "HU-", "name": "Fahm-e-Quran - I", "ch": 1}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-1001", "name": "Principles of Marketing", "ch": 3}], "3": [{"code": "MS-", "name": "Quantitative Analysis", "ch": 3}, {"code": "HU-2202", "name": "Expository English", "ch": 3}, {"code": "MS-3101", "name": "Personal Development", "ch": 3}, {"code": "MS-2101", "name": "Human Resource Management", "ch": 3}, {"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-1803", "name": "Peace Studies and Human Rights", "ch": 3}], "4": [{"code": "BS-1503", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship - I", "ch": 2}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 3}, {"code": "HU-", "name": "Fahm-e-Quran - II", "ch": 1}, {"code": "MS-2203", "name": "Cost Accounting", "ch": 3}, {"code": "MS-2406", "name": "Development Studies", "ch": 3}, {"code": "HU-", "name": "Ideology & Constitution of Pakistan", "ch": 2}], "5": [{"code": "MS-2102", "name": "Business Law", "ch": 3}, {"code": "MS-3401", "name": "Economic Issues of Pakistan", "ch": 3}, {"code": "MS-3503", "name": "Supply Chain Management", "ch": 3}, {"code": "MS-3601", "name": "Business Research Methods", "ch": 3}, {"code": "MS-3002", "name": "Marketing Management", "ch": 3}, {"code": "MS-3216", "name": "Entrepreneurship - II", "ch": 3}], "6": [{"code": "MS-", "name": "Organizational Behavior and Assessments", "ch": 3}, {"code": "MS-", "name": "Islamic Banking and Finance", "ch": 3}, {"code": "MS-3602", "name": "Data Analytics", "ch": 3}, {"code": "MS-3217", "name": "Financial Management", "ch": 3}, {"code": "MS-3504", "name": "Project Management", "ch": 3}, {"code": "MS-3004", "name": "Consumer Behavior Analysis", "ch": 3}], "7": [{"code": "MS-", "name": "E-Business", "ch": 3}, {"code": "MS-4113", "name": "Professional Development & Corporate Skills", "ch": 3}, {"code": "MS-4206", "name": "Financial Markets & Institutions", "ch": 3}, {"code": "MS-4114", "name": "Business Strategy", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-I", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-II", "ch": 3}], "8": [{"code": "MS-4115", "name": "International Business", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-III", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-IV", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}, "F26": {"1": [{"code": "BS-1021", "name": "Business Mathematics", "ch": 3}, {"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "MS-1303", "name": "Applications of Information and Communication Technologies", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}], "2": [{"code": "MS-1306", "name": "Quantitative Analysis", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}, {"code": "BS-1503", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "HU-1102", "name": "Fahm-e-Quran - I", "ch": 1}, {"code": "HU-2202", "name": "Expository Writing", "ch": 3}, {"code": "PS-1104", "name": "Psychology", "ch": 2}], "3": [{"code": "HU-2439", "name": "Arts and Humanities", "ch": 2}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "HU-1103", "name": "Fahm-e-Quran - II", "ch": 1}, {"code": "MS-2108", "name": "Organizational Behavior", "ch": 3}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-2001", "name": "Principles of Marketing", "ch": 3}, {"code": "MS-2107", "name": "Sustainable Business Practices", "ch": 3}], "4": [{"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 2}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 2}, {"code": "HU-1204", "name": "Islamic Studies", "ch": 2}, {"code": "MS-3002", "name": "Marketing Management", "ch": 3}, {"code": "MS-2101", "name": "Human Resource Management", "ch": 3}, {"code": "HU-2302", "name": "Ideology & Constitution of Pakistan", "ch": 2}], "5": [{"code": "MS-2102", "name": "Business Law", "ch": 3}, {"code": "MS-3217", "name": "Financial Management", "ch": 3}, {"code": "MS-3602", "name": "Data Analytics", "ch": 3}, {"code": "MS-3108", "name": "Strategic Management", "ch": 3}, {"code": "MS-3601", "name": "Business Research Methods", "ch": 3}, {"code": "MS-3216", "name": "Entrepreneurship and Innovation", "ch": 3}], "6": [{"code": "MS-3220", "name": "Sustainable Development Goals", "ch": 3}, {"code": "MS-2203", "name": "Cost Accounting", "ch": 3}, {"code": "MS-3503", "name": "Supply Chain Management", "ch": 3}, {"code": "MS-3218", "name": "AI in Business", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-I", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-II", "ch": 3}], "7": [{"code": "MS-4114", "name": "Consumer Behaviour", "ch": 3}, {"code": "MS-4113", "name": "Professional Development & Corporate Skills", "ch": 3}, {"code": "MS-4206", "name": "Financial Markets & Institutions", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-III", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-IV", "ch": 3}, {"code": "MS-4236", "name": "Islamic Finance", "ch": 3}], "8": [{"code": "MS-XXXX", "name": "Elective-V", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-VI", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}, {"code": "MS-4207", "name": "E-Commerce Strategies and Technologies", "ch": 3}, {"code": "MS-4039", "name": "Digital Marketing", "ch": 3}]}}, "BS-AF": {"2023": {"1": [{"code": "MS-1801", "name": "Islamic Studies / Ethics", "ch": 3}, {"code": "MS-1802", "name": "Functional English", "ch": 3}, {"code": "MS-1803", "name": "Peace Studies and Human Rights", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "MS-1804", "name": "Business Mathematics & Statistics", "ch": 3}, {"code": "MS-1302", "name": "Computer Skills", "ch": 3}, {"code": "MS-1805", "name": "Pakistan Studies", "ch": 3}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "MS-1001", "name": "Principles of Marketing", "ch": 3}], "3": [{"code": "MS-2806", "name": "Statistical Inference", "ch": 3}, {"code": "MS-2807", "name": "Expository English", "ch": 3}, {"code": "MS-2808", "name": "Industrial Revolution", "ch": 3}, {"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-2101", "name": "Human Resource Management", "ch": 3}], "4": [{"code": "MS-2809", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 3}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 3}, {"code": "MS-2210", "name": "Financial Management", "ch": 3}, {"code": "MS-2203", "name": "Cost Accounting", "ch": 3}], "5": [{"code": "MS-3207", "name": "Managerial Accounting", "ch": 3}, {"code": "MS-3103", "name": "Business Law", "ch": 3}, {"code": "MS-3209", "name": "Financial Reporting", "ch": 3}, {"code": "MS-3701", "name": "Auditing", "ch": 3}, {"code": "MS-3702", "name": "Taxation", "ch": 3}, {"code": "MS-3602", "name": "Data Analytics", "ch": 3}], "6": [{"code": "MS-3601", "name": "Business Research Methods", "ch": 3}, {"code": "MS-3208", "name": "Money & Banking", "ch": 3}, {"code": "MS-3211", "name": "Advanced Managerial Accounting", "ch": 3}, {"code": "MS-3213", "name": "Financial Risk Management", "ch": 3}, {"code": "MS-3703", "name": "Advanced Taxation", "ch": 3}, {"code": "MS-3212", "name": "Advanced Financial Reporting", "ch": 3}], "7": [{"code": "MS-4114", "name": "Business Strategy", "ch": 3}, {"code": "MS-4217", "name": "Financial Modeling", "ch": 3}, {"code": "MS-4206", "name": "Financial Markets & Institutions", "ch": 3}, {"code": "MS-4216", "name": "Corporate Finance", "ch": 3}, {"code": "MS-42XX", "name": "Elective-I", "ch": 3}, {"code": "MS-42XX", "name": "Elective-II", "ch": 3}], "8": [{"code": "MS-4218", "name": "Corporate Law", "ch": 3}, {"code": "MS-42XX", "name": "Elective-III", "ch": 3}, {"code": "MS-42XX", "name": "Elective-IV", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}, "2025": {"1": [{"code": "HU-1204", "name": "Islamic Studies / Ethics", "ch": 3}, {"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "MS-1302", "name": "Computer Skills", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "BS-5401", "name": "Business Mathematics and Statistics", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "HU-", "name": "Fahm-e-Quran - I", "ch": 1}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-1001", "name": "Principles of Marketing", "ch": 3}], "3": [{"code": "MS-", "name": "Quantitative Analysis", "ch": 3}, {"code": "HU-2202", "name": "Expository English", "ch": 3}, {"code": "MS-2406", "name": "Development Studies", "ch": 3}, {"code": "MS-2101", "name": "Human Resource Management", "ch": 3}, {"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-1803", "name": "Peace Studies and Human Rights", "ch": 3}], "4": [{"code": "MS-2809", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 2}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 3}, {"code": "MS-2210", "name": "Financial Management", "ch": 3}, {"code": "MS-2203", "name": "Cost Accounting", "ch": 3}, {"code": "HU-2104", "name": "Ideology & Constitution of Pakistan", "ch": 2}, {"code": "HU-", "name": "Fahm-e-Quran - I", "ch": 1}], "5": [{"code": "MS-3207", "name": "Managerial Accounting", "ch": 3}, {"code": "MS-3103", "name": "Business Law", "ch": 3}, {"code": "MS-3209", "name": "Financial Reporting", "ch": 3}, {"code": "MS-3701", "name": "Auditing", "ch": 3}, {"code": "MS-", "name": "Taxation", "ch": 3}, {"code": "MS-3602", "name": "Data Analytics", "ch": 3}], "6": [{"code": "MS-3601", "name": "Business Research Methods", "ch": 3}, {"code": "MS-3206", "name": "Financial Markets & Institutions", "ch": 3}, {"code": "MS-3211", "name": "Advanced Managerial Accounting", "ch": 3}, {"code": "MS-3213", "name": "Financial Risk Management", "ch": 3}, {"code": "MS-3703", "name": "Advanced Taxation", "ch": 3}, {"code": "MS-3212", "name": "Advanced Financial Reporting", "ch": 3}], "7": [{"code": "MS-4114", "name": "Business Strategy", "ch": 3}, {"code": "MS-4217", "name": "Financial Modeling", "ch": 3}, {"code": "MS-4208", "name": "Money & Banking", "ch": 3}, {"code": "MS-4225", "name": "Advanced Audit and Assurance", "ch": 3}, {"code": "MS-42xx", "name": "Elective-I", "ch": 3}, {"code": "MS-42xx", "name": "Elective-II", "ch": 3}], "8": [{"code": "MS-4218", "name": "Corporate Law", "ch": 3}, {"code": "MS-42xx", "name": "Elective-III", "ch": 3}, {"code": "MS-42xx", "name": "Elective-IV", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}, "F26": {"1": [{"code": "BS-1021", "name": "Business Mathematics and Statistics", "ch": 3}, {"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "MS-1303", "name": "Applications of Information and Communication Technologies", "ch": 3}, {"code": "MS-1401", "name": "Micro Economics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "BS-2333", "name": "Quantitative Reasoning", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "BS-1503", "name": "Environmental Sciences", "ch": 3}, {"code": "PS-1104", "name": "Psychology", "ch": 2}, {"code": "HU-1102", "name": "Fahm-e-Quran – I", "ch": 1}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "HU-2202", "name": "Expository English", "ch": 3}], "3": [{"code": "HU-2439", "name": "Arts and Humanities", "ch": 2}, {"code": "HU-1103", "name": "Fahm-e-Quran – II", "ch": 1}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "MS-2108", "name": "Organizational Behavior", "ch": 3}, {"code": "MS-1402", "name": "Macro Economics", "ch": 3}, {"code": "MS-1001", "name": "Principles of Marketing", "ch": 3}, {"code": "MS-2107", "name": "Sustainable Business Practices", "ch": 3}], "4": [{"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-2814", "name": "Entrepreneurship", "ch": 2}, {"code": "HU-2211", "name": "Civic and Community Engagement", "ch": 2}, {"code": "HU-1204", "name": "Islamic Studies", "ch": 2}, {"code": "MS-2203", "name": "Cost Accounting", "ch": 3}, {"code": "HU-2104", "name": "Ideology and Constitution of Pakistan", "ch": 2}, {"code": "MS-2101", "name": "Human Resource Management", "ch": 3}], "5": [{"code": "MS-3207", "name": "Managerial Accounting", "ch": 3}, {"code": "MS-3103", "name": "Business Law", "ch": 3}, {"code": "MS-3209", "name": "Financial Reporting", "ch": 3}, {"code": "MS-3219", "name": "Auditing", "ch": 3}, {"code": "MS-2210", "name": "Financial Management", "ch": 3}, {"code": "MS-3602", "name": "Data Analytics", "ch": 3}], "6": [{"code": "MS-4225", "name": "Advanced Audit and Assurance", "ch": 3}, {"code": "MS-XXXX", "name": "Elective I", "ch": 3}, {"code": "MS-3211", "name": "Advanced Managerial Accounting", "ch": 3}, {"code": "MS-XXXX", "name": "Elective II", "ch": 3}, {"code": "MS-3201", "name": "Taxation", "ch": 3}, {"code": "MS-3213", "name": "Advanced Financial Reporting", "ch": 3}], "7": [{"code": "MS-3601", "name": "Business Research Methods", "ch": 3}, {"code": "MS-4039", "name": "Digital Marketing", "ch": 3}, {"code": "MS-3321", "name": "AI in Business", "ch": 3}, {"code": "MS-3202", "name": "Advanced Taxation", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-III", "ch": 3}, {"code": "MS-XXX", "name": "Elective-IV", "ch": 3}], "8": [{"code": "MS-3221", "name": "Corporate Finance", "ch": 3}, {"code": "MS-4117", "name": "Corporate Law", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-V", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-VI", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}}, "BS-BAP": {"2023": {"1": [{"code": "MS-1801", "name": "Islamic Studies / Ethics", "ch": 3}, {"code": "MS-1802", "name": "Functional English", "ch": 3}, {"code": "MS-1803", "name": "Peace Studies and Human Rights", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "MS-3103", "name": "Fundamentals of Business Analytics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "MS-1806", "name": "Statistical for Business Analytics", "ch": 3}, {"code": "MS-1302", "name": "Computer Skills", "ch": 3}, {"code": "MS-1805", "name": "Pakistan Studies", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-1304", "name": "Object Oriented Programming", "ch": 3}], "3": [{"code": "MS-2812", "name": "Introduction to Econometrics", "ch": 3}, {"code": "MS-2807", "name": "Expository English", "ch": 3}, {"code": "MS-2808", "name": "Industrial Revolution", "ch": 3}, {"code": "MS-2813", "name": "Business Mathematics", "ch": 3}, {"code": "MS-2104", "name": "HRM Analytics", "ch": 3}], "4": [{"code": "MS-2809", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 3}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 3}, {"code": "MS-2305", "name": "Fundamentals of Data Structure", "ch": 3}, {"code": "MS-2103", "name": "Legal & Ethical Issues in Business Analytics", "ch": 3}], "5": [{"code": "MS-3101", "name": "Personal Development", "ch": 3}, {"code": "MS-3304", "name": "Data Mining", "ch": 3}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "MS-3005", "name": "Marketing Analytics", "ch": 3}, {"code": "MS-3305", "name": "Fundamentals Of Machine Learning", "ch": 3}, {"code": "MS-3601", "name": "Business Research Methods", "ch": 3}], "6": [{"code": "MS-3306", "name": "Data Structure and Business Application", "ch": 3}, {"code": "MS-3307", "name": "Data Management and Visualization", "ch": 3}, {"code": "MS-3308", "name": "Web Technologies", "ch": 3}, {"code": "MS-3309", "name": "Search Engine Optimization and Analytics", "ch": 3}, {"code": "MS-3504", "name": "Project Management", "ch": 3}, {"code": "MS-3310", "name": "Machine Learning for Business Analytics", "ch": 3}], "7": [{"code": "MS-4113", "name": "Professional Development & Corporate Skills", "ch": 3}, {"code": "MS-4260", "name": "Business Finance", "ch": 3}, {"code": "MS-3311", "name": "Business Data and Text Mining", "ch": 3}, {"code": "MS-3312", "name": "Application Systems Development for Business Analytics", "ch": 3}, {"code": "MS-XXXX", "name": "Elective I", "ch": 3}, {"code": "MS-XXXX", "name": "Elective II", "ch": 3}], "8": [{"code": "MS-4115", "name": "Decision Sciences for Business", "ch": 3}, {"code": "MS-XXXX", "name": "Elective III", "ch": 3}, {"code": "MS-XXXX", "name": "Elective IV", "ch": 3}]}, "2025": {"1": [{"code": "HU-1204", "name": "Islamic Studies / Ethics", "ch": 3}, {"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1302", "name": "Computer Skills", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}], "2": [{"code": "BS-", "name": "Calculus for Business Analytics", "ch": 3}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}, {"code": "MS-1304", "name": "Object Oriented Programming", "ch": 3}, {"code": "MS-", "name": "Peace Studies and Human Rights", "ch": 3}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "HU-", "name": "Fahm-e-Quran - I", "ch": 1}], "3": [{"code": "MS-2103", "name": "Fundamentals of Business Analytics", "ch": 3}, {"code": "HU-2202", "name": "Expository English", "ch": 3}, {"code": "MS-2406", "name": "Development Studies", "ch": 3}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-", "name": "Statistics for Business Analytics", "ch": 3}, {"code": "MS-2305", "name": "Fundamentals of Data Structure", "ch": 3}, {"code": "HU-", "name": "Fahm-e-Quran - II", "ch": 1}], "4": [{"code": "MS-2809", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 2}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 3}, {"code": "HU-", "name": "Ideology & Constitution of Pakistan", "ch": 2}, {"code": "MS-2812", "name": "Introduction to Econometrics", "ch": 3}, {"code": "MS-3313", "name": "Database Systems", "ch": 3}], "5": [{"code": "MS-3101", "name": "Personal Development", "ch": 3}, {"code": "MS-3304", "name": "Data Mining", "ch": 3}, {"code": "MS-3305", "name": "Fundamentals Of Machine Learning", "ch": 3}, {"code": "MS-3005", "name": "Marketing Analytics", "ch": 3}, {"code": "MS-2104", "name": "HRM Analytics", "ch": 3}, {"code": "MS-4260", "name": "Business Finance", "ch": 3}], "6": [{"code": "MS-3104", "name": "Legal & Ethical Issues in Business Analytics", "ch": 3}, {"code": "MS-3307", "name": "Data Management and Visualization", "ch": 3}, {"code": "MS-3206", "name": "Financial Markets & Institutions", "ch": 3}, {"code": "MS-3309", "name": "Search Engine Optimization and Analytics", "ch": 3}, {"code": "MS-3504", "name": "Project Management", "ch": 3}, {"code": "MS-3310", "name": "Machine Learning for Business Analytics", "ch": 3}], "7": [{"code": "MS-4113", "name": "Professional Development & Corporate Skills", "ch": 3}, {"code": "MS-3308", "name": "Web Technologies", "ch": 3}, {"code": "MS-3602", "name": "Research Methods for Capstone Project", "ch": 3}, {"code": "MS-3312", "name": "Application Systems Development for Business Analytics", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-I", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-II", "ch": 3}], "8": [{"code": "MS-4115", "name": "Decision Science for Business", "ch": 3}, {"code": "MS-XXXX", "name": "Elective II", "ch": 3}, {"code": "MS-XXXX", "name": "Elective IV", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}, "F26": {"1": [{"code": "BS-1401", "name": "Business Mathematics", "ch": 3}, {"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "MS-1303", "name": "Applications of ICT", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "HU-1102", "name": "Fahm-e-Quran - 1", "ch": 1}], "2": [{"code": "BS-1306", "name": "Quantitative Analysis", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}, {"code": "BS-1503", "name": "Environmental Sciences", "ch": 3}, {"code": "MS-1402", "name": "Macroeconomics", "ch": 3}, {"code": "MS-1101", "name": "Principles of Management", "ch": 3}, {"code": "HU-2202", "name": "Expository Writing", "ch": 3}, {"code": "PS-1104", "name": "Psychology", "ch": 2}], "3": [{"code": "HU-2439", "name": "Arts and Humanities", "ch": 2}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "HU-1103", "name": "Fahm-e-Quran - II", "ch": 1}, {"code": "HU-1204", "name": "Islamic Studies/Ethics", "ch": 2}, {"code": "MS-3002", "name": "Marketing Management", "ch": 3}, {"code": "MS-2306", "name": "Data Structure for Business Analytics", "ch": 3}, {"code": "HU-3101", "name": "Ideology & Constitution of Pakistan", "ch": 2}], "4": [{"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-2810", "name": "Entrepreneurship", "ch": 2}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 2}, {"code": "MS-2103", "name": "Organizational Behavior", "ch": 3}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "MS-1001", "name": "Principles of Marketing", "ch": 3}, {"code": "MS-1304", "name": "Object Oriented Programming", "ch": 3}], "5": [{"code": "MS-3104", "name": "Legal & Ethical Issues in Business Analytics", "ch": 3}, {"code": "MS-3217", "name": "Financial Management", "ch": 3}, {"code": "MS-3104", "name": "Human Resource Management", "ch": 3}, {"code": "MS-3319", "name": "Database Systems for Business Analytics", "ch": 3}, {"code": "MS-3602", "name": "Research Methods for Capstone Project", "ch": 3}, {"code": "MS-3320", "name": "Data Mining for Business Analytics", "ch": 3}], "6": [{"code": "MS-3406", "name": "Sustainable Development Goals", "ch": 3}, {"code": "MS-3310", "name": "Machine Learning for Business Analytics", "ch": 3}, {"code": "MS-3309", "name": "Search Engine Optimization and Analytics", "ch": 3}, {"code": "MS-3321", "name": "AI in Business", "ch": 3}, {"code": "MS-XXXX", "name": "Specialization I", "ch": 3}, {"code": "MS-XXXX", "name": "Specialization II", "ch": 3}], "7": [{"code": "MS-4307", "name": "Data Management and Visualization", "ch": 3}, {"code": "MS-4316", "name": "Web Technologies for Business Analytics", "ch": 3}, {"code": "MS-4236", "name": "Econometrics for Business Decisions", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-IV", "ch": 3}, {"code": "MS-4317", "name": "Business Analytics for Business Decisions", "ch": 3}], "8": [{"code": "MS-XXXX", "name": "Elective-V", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-VI", "ch": 3}, {"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-XXXX", "name": "Elective-III", "ch": 3}, {"code": "MS-4312", "name": "Application Systems Development for Business Analytics", "ch": 3}]}}, "BS-Fin": {"F26": {"1": [{"code": "HU-1045", "name": "Functional English", "ch": 3}, {"code": "BS-1401", "name": "Business Mathematics", "ch": 3}, {"code": "MS-1303", "name": "Applications of Information and Communication Technologies", "ch": 3}, {"code": "MS-1401", "name": "Microeconomics", "ch": 3}, {"code": "MS-1201", "name": "Principles of Accounting", "ch": 3}], "2": [{"code": "HU-2202", "name": "Expository English", "ch": 3}, {"code": "BS-1503", "name": "Environmental Sciences", "ch": 3}, {"code": "PS-1104", "name": "Psychology", "ch": 2}, {"code": "MS-1202", "name": "Financial Accounting", "ch": 3}, {"code": "HU-1102", "name": "Fahm-e-Quran I", "ch": 1}, {"code": "MS-1306", "name": "Quantitative Analysis", "ch": 3}, {"code": "MS-1203", "name": "Fundamentals of FinTech", "ch": 3}], "3": [{"code": "HU-2439", "name": "Fine Arts", "ch": 2}, {"code": "HU-2101", "name": "Pakistan Studies", "ch": 2}, {"code": "HU-1103", "name": "Fahm-e-Quran - II", "ch": 1}, {"code": "HU-1204", "name": "Islamic Studies", "ch": 2}, {"code": "MS-1304", "name": "Object Oriented Programming", "ch": 3}, {"code": "MS-2811", "name": "Civic and Community Engagement", "ch": 2}, {"code": "MS-2001", "name": "Principles of Marketing", "ch": 3}, {"code": "HU-2302", "name": "Ideology & Constitution of Pakistan", "ch": 2}], "4": [{"code": "MS-2801", "name": "Entrepreneurship", "ch": 2}, {"code": "MS-2401", "name": "Macroeconomics", "ch": 3}, {"code": "MS-2305", "name": "Fundamentals of Data Structure", "ch": 3}, {"code": "MS-2209", "name": "Introduction to Business Finance", "ch": 3}, {"code": "MS-2003", "name": "Marketing Management", "ch": 3}, {"code": "MS-2106", "name": "Principles of Management", "ch": 3}], "5": [{"code": "MS-3107", "name": "HRM Analytics", "ch": 3}, {"code": "MS-3108", "name": "Strategic Management", "ch": 3}, {"code": "MS-3304", "name": "Business Data and Text Mining", "ch": 3}, {"code": "MS-3702", "name": "Taxation", "ch": 3}, {"code": "MS-3305", "name": "Fundamentals of Machine Learning", "ch": 3}, {"code": "MS-3217", "name": "Financial Management", "ch": 3}], "6": [{"code": "MS-3312", "name": "Data Management and Visualization", "ch": 3}, {"code": "MS-XXXX", "name": "Elective I", "ch": 3}, {"code": "MS-XXXX", "name": "Elective II", "ch": 3}, {"code": "MS-3321", "name": "AI in Business", "ch": 3}, {"code": "MS-3222", "name": "Financial Econometrics", "ch": 3}, {"code": "MS-3601", "name": "Business Research Methods", "ch": 3}], "7": [{"code": "MS-XXXX", "name": "Elective III", "ch": 3}, {"code": "MS-4203", "name": "Cost Accounting", "ch": 3}, {"code": "MS-XXXX", "name": "Elective IV", "ch": 3}, {"code": "MS-4316", "name": "Web Technologies for Business Analytics", "ch": 3}, {"code": "MS-4206", "name": "Financial Markets and Institution", "ch": 3}, {"code": "MS-4236", "name": "Islamic Finance", "ch": 3}], "8": [{"code": "MS-4601", "name": "Capstone Project", "ch": 3}, {"code": "MS-4218", "name": "Elective V", "ch": 3}, {"code": "MS-4209", "name": "ESG Investing", "ch": 3}, {"code": "MS-XXXX", "name": "Elective VI", "ch": 3}, {"code": "MS-4602", "name": "Internship", "ch": 3}]}}};
+const BUILTIN_2021_ROADMAPS={
+  BBA:{
+    1:[
+      {code:'',name:'Business Mathematics (Numeracy Skills)',ch:3},
+      {code:'',name:'English: Grammar, Prose, Reading & Comprehension',ch:3},
+      {code:'',name:'Islamic Studies / Ethics',ch:3},
+      {code:'',name:'Pakistan Studies',ch:3},
+      {code:'',name:'Introduction to Computing',ch:3},
+      {code:'',name:'Microeconomics',ch:3}
+    ],
+    2:[
+      {code:'',name:'Introduction to Psychology',ch:3},
+      {code:'',name:'Introduction to Sociology',ch:3},
+      {code:'',name:'Oral Communication and Presentation Skills',ch:3},
+      {code:'',name:'Principles of Management',ch:3},
+      {code:'',name:'Principles of Accounting',ch:3},
+      {code:'',name:'Macroeconomics',ch:3}
+    ],
+    3:[
+      {code:'',name:'Business Statistics',ch:3},
+      {code:'',name:'Business Communication',ch:3},
+      {code:'',name:'Personal Development (Self-Management)',ch:3},
+      {code:'',name:'Business Law',ch:3},
+      {code:'',name:'Financial Accounting',ch:3},
+      {code:'',name:'Organizational Behavior',ch:3}
+    ],
+    4:[
+      {code:'',name:'Statistical Inference',ch:3},
+      {code:'',name:'Academic Writing',ch:3},
+      {code:'',name:'Principles of Marketing',ch:3},
+      {code:'',name:'Human Resource Management',ch:3},
+      {code:'',name:'Economic Issues of Pakistan',ch:3},
+      {code:'',name:'Introduction to Business Finance',ch:3}
+    ],
+    5:[
+      {code:'',name:'Cost Accounting',ch:3},
+      {code:'',name:'Marketing Management',ch:3},
+      {code:'',name:'Elective – I',ch:3},
+      {code:'',name:'Information Management & Strategy',ch:3},
+      {code:'',name:'Operations & Supply Chain Management',ch:3},
+      {code:'',name:'Business Research Methods',ch:3}
+    ],
+    6:[
+      {code:'',name:'Consumer Behavior',ch:3},
+      {code:'',name:'Entrepreneurship and Small Business Management',ch:3},
+      {code:'',name:'E-Business',ch:3},
+      {code:'',name:'Elective – II',ch:3},
+      {code:'',name:'Specialization - I',ch:3},
+      {code:'',name:'Financial Management',ch:3}
+    ],
+    7:[
+      {code:'',name:'Business Ethics & Social Responsibility',ch:3},
+      {code:'',name:'Specialization – II',ch:3},
+      {code:'',name:'Professional Development & Corporate Skills',ch:3},
+      {code:'',name:'Business Strategy',ch:3},
+      {code:'',name:'Financial Markets & Institutions',ch:3}
+    ],
+    8:[
+      {code:'',name:'Specialization – III',ch:3},
+      {code:'',name:'Specialization – IV',ch:3},
+      {code:'',name:'Project',ch:3},
+      {code:'',name:'Retail Management',ch:3}
+    ]
+  },
+  'BS-AF':{
+    1:[
+      {code:'',name:'Introduction to Mathematics',ch:3},
+      {code:'M-304',name:'Introduction to Information Technology',ch:3},
+      {code:'HU-1203',name:'Islamic Studies / Ethics',ch:3},
+      {code:'HU-2101',name:'Pakistan Studies',ch:3},
+      {code:'MS-1401',name:'Microeconomics',ch:3},
+      {code:'HU-1005',name:'Freshman English - I',ch:3}
+    ],
+    2:[
+      {code:'MU-1303',name:'Understanding Psychology & Human Behavior',ch:3},
+      {code:'MS-1111',name:'Management & Organizational Behavior',ch:3},
+      {code:'HU-2501',name:'Critical Thinking',ch:3},
+      {code:'MS-2102',name:'Business Law',ch:3},
+      {code:'MS-1201',name:'Principles of Accounting',ch:3},
+      {code:'MS-1402',name:'Macroeconomics',ch:3}
+    ],
+    3:[
+      {code:'MS-2701',name:'Auditing',ch:3},
+      {code:'MS-3204',name:'Introduction to Business Finance',ch:3},
+      {code:'MS-2001',name:'Principles of Marketing',ch:3},
+      {code:'MS-2202',name:'Financial Accounting',ch:3},
+      {code:'HU-2008',name:'Business Communication',ch:3},
+      {code:'',name:'',ch:3}
+    ],
+    4:[
+      {code:'MS-4206',name:'Financial Markets & Institutions',ch:3},
+      {code:'MS-2208',name:'Financial Risk Management',ch:3},
+      {code:'MS-2702',name:'Taxation (Direct & Indirect)',ch:3},
+      {code:'MS-4205',name:'Financial Management',ch:3},
+      {code:'MS-2207',name:'Money & Banking',ch:3},
+      {code:'MS-2203',name:'Cost Accounting',ch:3}
+    ],
+    5:[
+      {code:'BS-',name:'Calculus for Business Decisions (Financial Analysis)',ch:3},
+      {code:'MS-3207',name:'Managerial Accounting (Cost & Managerial Accounting)',ch:3},
+      {code:'MS-3208',name:'Introduction to ERP Systems in Finance',ch:3},
+      {code:'MS-3209',name:'Financial Reporting',ch:3},
+      {code:'MS-3210',name:'Advanced Taxation',ch:3},
+      {code:'MS-4113',name:'Professional Development & Corporate Skills',ch:3}
+    ],
+    6:[
+      {code:'MS-3601',name:'Business Research Methods',ch:3},
+      {code:'MS-3211',name:'Advanced Managerial Accounting',ch:3},
+      {code:'MS-3212',name:'Advanced Financial Reporting',ch:3},
+      {code:'MS-3104',name:'Human Resource Management',ch:3},
+      {code:'MS-3215',name:'Financial Analysis (Econometric labs) (Financial Forecasting)',ch:3},
+      {code:'MS-4107',name:'Business Policy',ch:3}
+    ],
+    7:[
+      {code:'MS-4216',name:'Corporate Finance',ch:3},
+      {code:'MS-4217',name:'Financial Modeling',ch:3},
+      {code:'',name:'Elective I',ch:3},
+      {code:'',name:'Specialization - I',ch:3},
+      {code:'',name:'Specialization - II',ch:3}
+    ],
+    8:[
+      {code:'MS-4218',name:'Corporate Law',ch:3},
+      {code:'MS-4606',name:'Project',ch:3},
+      {code:'',name:'Elective II',ch:3},
+      {code:'',name:'Specialization - III',ch:3},
+      {code:'',name:'Specialization - IV',ch:3}
+    ]
+  }
+};
+PLANS.BBA['2021']=BUILTIN_2021_ROADMAPS.BBA;
+PLANS['BS-AF']['2021']=BUILTIN_2021_ROADMAPS['BS-AF'];
+const ELECTIVES = {"BBA": [{"code": "MS-4143", "name": "Contemporary Social Policy Issues in Pakistan", "ch": 3}, {"code": "MS-4144", "name": "Governance System of Pakistan", "ch": 3}, {"code": "MS-4145", "name": "Change & Innovation Management", "ch": 3}, {"code": "MS-4146", "name": "Managing Diversity", "ch": 3}, {"code": "MS-4147", "name": "Globalization, Culture & Ethics", "ch": 3}, {"code": "MS-4148", "name": "Management & Organizational Change", "ch": 3}, {"code": "MS-4149", "name": "Innovation and Knowledge Management", "ch": 3}, {"code": "MS-4150", "name": "Corporate Governance", "ch": 3}, {"code": "MS-4151", "name": "Global Competition and International Strategy", "ch": 3}, {"code": "MS-4152", "name": "Crisis Leadership & Human Behavior", "ch": 3}, {"code": "MS-4153", "name": "Family Business: A Guide for Owners, Managers & Advisors", "ch": 3}, {"code": "MS-4154", "name": "Advanced Competitive Strategy", "ch": 3}, {"code": "MS-4025", "name": "Marketing & Electronic Communications", "ch": 3}, {"code": "MS-4026", "name": "Brand Management", "ch": 3}, {"code": "MS-4027", "name": "Marketing Research", "ch": 3}, {"code": "MS-4028", "name": "Data & Analysis for Marketing Decisions", "ch": 3}, {"code": "MS-4029", "name": "Advertising Management", "ch": 3}, {"code": "MS-4030", "name": "New Product Development", "ch": 3}, {"code": "MS-4031", "name": "AI in Marketing", "ch": 3}, {"code": "MS-4032", "name": "Marketing Strategies for Bottom of Pyramid", "ch": 3}, {"code": "MS-4033", "name": "Contemporary Marketing Communication", "ch": 3}, {"code": "MS-4034", "name": "Services Marketing", "ch": 3}, {"code": "MS-4035", "name": "Marketing to Developing & Emerging Economies", "ch": 3}, {"code": "MS-4036", "name": "Media Strategy for a Digital Economy", "ch": 3}, {"code": "", "name": "CRM Systems and Applications", "ch": 3}, {"code": "MS-4222", "name": "Applied Financial Analysis", "ch": 3}, {"code": "MS-4223", "name": "Investments & Capital Markets", "ch": 3}, {"code": "MS-4224", "name": "Financial Derivative", "ch": 3}, {"code": "MS-4224", "name": "Options, Swaps and Futures", "ch": 3}, {"code": "MS-4226", "name": "Financial Modeling", "ch": 3}, {"code": "MS-4227", "name": "Corporate Restructuring", "ch": 3}, {"code": "MS-4228", "name": "Corporate Finance", "ch": 3}, {"code": "MS-4229", "name": "Financial Analysis of Mergers and Acquisitions", "ch": 3}, {"code": "MS-4230", "name": "International Financial Management", "ch": 3}, {"code": "MS-4231", "name": "Financial Risk Management", "ch": 3}, {"code": "MS-4232", "name": "Investment Analysis", "ch": 3}, {"code": "MS-4233", "name": "Financial Statement Analysis", "ch": 3}, {"code": "MS-4234", "name": "Investment Risk Management", "ch": 3}, {"code": "MS-4256", "name": "Fintech", "ch": 3}, {"code": "MS-4511", "name": "SCM Analytics", "ch": 3}, {"code": "MS-4512", "name": "SCM & Data Sciences", "ch": 3}, {"code": "MS-4513", "name": "Packaging Design and Environmental Aspects", "ch": 3}, {"code": "MS-4514", "name": "SCM Technology, Systems and Innovation", "ch": 3}, {"code": "MS-4515", "name": "SCM Modeling", "ch": 3}, {"code": "MS-4516", "name": "Inventory Management", "ch": 3}, {"code": "MS-4517", "name": "Supply Chain Forecasting", "ch": 3}, {"code": "MS-4518", "name": "Transport & Distribution Networks", "ch": 3}, {"code": "MS-4519", "name": "Green Supply Chain Management", "ch": 3}, {"code": "MS-4520", "name": "Contemporary Issues in Supply Chain Management", "ch": 3}, {"code": "MS-4521", "name": "Packaging Design and Environmental Aspects", "ch": 3}, {"code": "MS-4522", "name": "Storage and Warehouse Techniques", "ch": 3}, {"code": "MS-4701", "name": "Project Risk Management", "ch": 3}, {"code": "MS-4702", "name": "Project Leadership", "ch": 3}, {"code": "MS-4703", "name": "Risk Management Dynamics", "ch": 3}, {"code": "MS-4704", "name": "Financial Decision Analysis", "ch": 3}, {"code": "MS-4705", "name": "Quality Management Tools", "ch": 3}, {"code": "MS-4706", "name": "Business Analysis", "ch": 3}, {"code": "MS-4707", "name": "Budget & Commercial Management", "ch": 3}, {"code": "MS-4708", "name": "Project Environment & Planning", "ch": 3}, {"code": "MS-4709", "name": "Project Management Simulation", "ch": 3}, {"code": "MS-4710", "name": "Project Communication, Reporting and Presentation", "ch": 3}, {"code": "MS-4711", "name": "Governance, Monitoring and Evaluation of Development Projects", "ch": 3}, {"code": "MS-4712", "name": "Enterprise Resource Planning", "ch": 3}, {"code": "MS-4301", "name": "ERP Implementation", "ch": 3}, {"code": "MS-4302", "name": "Data Communication and Networking", "ch": 3}, {"code": "MS-4303", "name": "Digital Analytics", "ch": 3}, {"code": "MS-4304", "name": "Business Process Re-Engineering", "ch": 3}, {"code": "MS-4305", "name": "Business Intelligence and Decisions Support", "ch": 3}, {"code": "MS-4306", "name": "Web Application Development", "ch": 3}, {"code": "MS-4307", "name": "Software Design & Integration", "ch": 3}, {"code": "MS-4308", "name": "Social & Ethical Issues of the Internet", "ch": 3}, {"code": "MS-4309", "name": "Cybersecurity", "ch": 3}, {"code": "MS-4310", "name": "Business Data Communications & Networking", "ch": 3}, {"code": "MS-4311", "name": "Big Data Technologies", "ch": 3}, {"code": "MS-4312", "name": "Data Mining for Business Intelligence", "ch": 3}, {"code": "MS-4131", "name": "HRM and HRD", "ch": 3}, {"code": "MS-4132", "name": "Learning & Development", "ch": 3}, {"code": "MS-4133", "name": "Leadership & Team Management", "ch": 3}, {"code": "MS-4134", "name": "Strategic & Global HRM", "ch": 3}, {"code": "MS-4135", "name": "Organization Theory & Design", "ch": 3}, {"code": "MS-4136", "name": "HR Analytics", "ch": 3}, {"code": "MS-4137", "name": "Human Resource Information Systems", "ch": 3}, {"code": "MS-4138", "name": "Talent Acquisition", "ch": 3}, {"code": "MS-4139", "name": "Strategic People Management", "ch": 3}, {"code": "MS-4140", "name": "Dispute & Labor Relations Management", "ch": 3}, {"code": "MS-4141", "name": "HR Theory & Practice", "ch": 3}, {"code": "MS-4142", "name": "Career Planning & Strategic Compensation Management", "ch": 3}, {"code": "MS-4801", "name": "Current Affairs", "ch": 3}, {"code": "MS-4802", "name": "World Economy", "ch": 3}, {"code": "MS-4803", "name": "Media Management", "ch": 3}, {"code": "MS-4804", "name": "Analytics & Digital Economy", "ch": 3}, {"code": "MS-4805", "name": "CPEC & Regional Connectivity", "ch": 3}, {"code": "MS-4806", "name": "Chinese Language", "ch": 3}, {"code": "MS-4807", "name": "Japanese", "ch": 3}, {"code": "MS-4808", "name": "German", "ch": 3}, {"code": "MS-4809", "name": "Media Studies & Graphic Designing", "ch": 3}, {"code": "MS-4810", "name": "Introduction to Mass Communication", "ch": 3}, {"code": "MS-4811", "name": "Social Policy and Governance", "ch": 3}, {"code": "MS-4812", "name": "Non-Governmental Organizations and Development", "ch": 3}, {"code": "MS-4813", "name": "Sustainable Agriculture and Food Security", "ch": 3}, {"code": "MS-4814", "name": "Climate Change and Sustainability Challenges in Pakistan", "ch": 3}, {"code": "MS-4815", "name": "Development Aid and Politics", "ch": 3}, {"code": "MS-4816", "name": "Regional Trading Blocks in the World Economic System", "ch": 3}, {"code": "MS-4817", "name": "Photography & Video Blogging", "ch": 3}, {"code": "MS-4818", "name": "Interior Decoration & Fashion Designing", "ch": 3}, {"code": "", "name": "Corporate Housing Societies", "ch": 3}, {"code": "MS-4236", "name": "Islamic Banking and Finance", "ch": 3}, {"code": "HU-1210", "name": "Human Rights and Peaceful Coexistence", "ch": 3}], "BS-AF": [{"code": "MS-4219", "name": "Corporate Governance", "ch": 3}, {"code": "MS-4220", "name": "Accounting Information System With SAP", "ch": 3}, {"code": "MS-4221", "name": "Mercantile Law", "ch": 3}, {"code": "MS-4222", "name": "Strategic Management Accounting and Control", "ch": 3}, {"code": "MS-4223", "name": "Tax Management and Optimization", "ch": 3}, {"code": "MS-4224", "name": "Advanced Financial Reporting", "ch": 3}, {"code": "MS-4216", "name": "Corporate Finance", "ch": 3}, {"code": "MS-4226", "name": "Strategic Business Reporting", "ch": 3}, {"code": "MS-4227", "name": "Forensic Accounting", "ch": 3}, {"code": "MS-4228", "name": "Public Sector Accounting", "ch": 3}, {"code": "MS-4229", "name": "Cost Management System, Design & Control", "ch": 3}, {"code": "MS-4230", "name": "Advanced Performance Management", "ch": 3}, {"code": "MS-4231", "name": "Advance Financial Management", "ch": 3}, {"code": "MS-4232", "name": "Financial Econometrics", "ch": 3}, {"code": "MS-4233", "name": "Corporate Financial Restructuring", "ch": 3}, {"code": "MS-4234", "name": "Derivatives and Hedging", "ch": 3}, {"code": "MS-4235", "name": "International Trade and Finance", "ch": 3}, {"code": "MS-4236", "name": "Islamic Banking and Finance", "ch": 3}, {"code": "MS-4237", "name": "Analysis of Financial Time Series", "ch": 3}, {"code": "MS-4238", "name": "Financial Information System", "ch": 3}, {"code": "MS-4239", "name": "Portfolio Analysis and Management", "ch": 3}, {"code": "MS-4240", "name": "Treasury and Funds Management", "ch": 3}, {"code": "MS-4241", "name": "Entrepreneurial Finance", "ch": 3}, {"code": "MS-4242", "name": "Budgeting", "ch": 3}, {"code": "MS-4243", "name": "Analysis of Financial Statements", "ch": 3}, {"code": "MS-4244", "name": "Branch and Branchless Banking", "ch": 3}, {"code": "MS-4245", "name": "Lending-Products, Operation and Risk Management", "ch": 3}, {"code": "MS-4246", "name": "Marketing of Financial Services", "ch": 3}, {"code": "MS-4247", "name": "Information Technology in Financial Services", "ch": 3}, {"code": "MS-4248", "name": "Investment Banking", "ch": 3}, {"code": "MS-4249", "name": "Commercial Banking", "ch": 3}, {"code": "MS-4250", "name": "Business Intelligence", "ch": 3}, {"code": "MS-4251", "name": "Security Analysis", "ch": 3}, {"code": "MS-4252", "name": "Investment Analysis & Portfolio Management", "ch": 3}, {"code": "MS-4253", "name": "Derivatives", "ch": 3}, {"code": "MS-4254", "name": "Behavioral Finance", "ch": 3}, {"code": "MS-4256", "name": "Micro Finance", "ch": 3}, {"code": "MS-4257", "name": "Capital Markets", "ch": 3}, {"code": "MS-4258", "name": "Fintech", "ch": 3}, {"code": "MS-4259", "name": "Project Appraisal", "ch": 3}, {"code": "", "name": "Retail Banking", "ch": 3}, {"code": "", "name": "Corporate Housing Societies", "ch": 3}, {"code": "HU-1210", "name": "Human Rights and Peaceful Coexistence", "ch": 3}], "BS-BAP": [{"code": "MS-4280", "name": "Capital Market and Investment", "ch": 3}, {"code": "MS-4282", "name": "Risk Analytics for Financial Services", "ch": 3}, {"code": "MS-4382", "name": "Big Data Techniques and Technologies", "ch": 3}, {"code": "MS-4283", "name": "Mining Web Data for Business Insights", "ch": 3}, {"code": "MS-4284", "name": "Digital Investment Portfolio", "ch": 3}, {"code": "MS-4285", "name": "Block Chain and Distributed Ledger Technologies", "ch": 3}, {"code": "MS-4037", "name": "Data-Driven Marketing", "ch": 3}, {"code": "MS-4038", "name": "Search Engine Optimization and Analytics", "ch": 3}, {"code": "MS-4039", "name": "Feature Engineering for Machine Learning", "ch": 3}, {"code": "MS-4040", "name": "Social Media Network Analysis", "ch": 3}, {"code": "MS-4041", "name": "Digital Platform Marketing Strategy", "ch": 3}, {"code": "MS-4042", "name": "Digital Brand Management", "ch": 3}, {"code": "MS-3217", "name": "Financial Management", "ch": 3}, {"code": "MS-4314", "name": "Database Structure", "ch": 3}, {"code": "MS-3004", "name": "Consumer Behavior", "ch": 3}, {"code": "MS-4801", "name": "Current Affairs", "ch": 3}, {"code": "MS-4802", "name": "World Economy", "ch": 3}, {"code": "MS-4803", "name": "Media Management", "ch": 3}, {"code": "MS-4804", "name": "Analytics & Digital Economy", "ch": 3}, {"code": "MS-4805", "name": "CPEC & Regional Connectivity", "ch": 3}, {"code": "MS-4806", "name": "Chinese Language", "ch": 3}, {"code": "MS-4807", "name": "Japanese Language", "ch": 3}, {"code": "MS-4808", "name": "German Language", "ch": 3}, {"code": "MS-4809", "name": "Media Studies & Graphic Designing", "ch": 3}, {"code": "MS-4810", "name": "Introduction to Mass Communication", "ch": 3}, {"code": "MS-4811", "name": "Social Policy and Governance", "ch": 3}, {"code": "MS-4812", "name": "Non-Governmental Organizations and Development", "ch": 3}, {"code": "MS-4813", "name": "Sustainable Agriculture and Food Security", "ch": 3}, {"code": "MS-4814", "name": "Climate Change and Sustainability Challenges in Pakistan", "ch": 3}, {"code": "MS-4815", "name": "Development Aid and Politics", "ch": 3}, {"code": "MS-4816", "name": "Regional Trading Blocks in the World Economic System", "ch": 3}, {"code": "MS-4817", "name": "Photography & Video Blogging", "ch": 3}, {"code": "MS-4818", "name": "Interior Decoration & Fashion Designing", "ch": 3}, {"code": "", "name": "Corporate Housing Societies", "ch": 3}, {"code": "", "name": "Retail Banking", "ch": 3}, {"code": "MS-4236", "name": "Islamic Banking and Finance", "ch": 3}, {"code": "HU-1210", "name": "Human Rights and Peaceful Coexistence", "ch": 3}], "BS-Fin": []};
+let SERIES_RULES={
+  BBA:{'2019':['201','202','203','204','205','206','207','208','209','210','211'],'2021':['212','221','222'],'2023':['231','232','241'],'2025':['242','251','252'],'F26':[]},
+  'BS-AF':{'2019':[],'2021':['212','221','222'],'2023':['231','232','241'],'2025':['242','251','252'],'F26':[]},
+  'BS-BAP':{'2019':[],'2021':[],'2023':['231','232','241'],'2025':['242','251','252'],'F26':[]},
+  'BS-Fin':{'2019':[],'2021':[],'2023':[],'2025':[],'F26':['261','FIN261']}
+};let records=[], activeProgram='BBA', activeStudentKey=null, activeView='students';
+const $=id=>document.getElementById(id);
+function norm(v){return String(v??'').trim().toUpperCase().replace(/[\s_\-–—]+/g,'').replace(/[^A-Z0-9]/g,'')}
+function courseId(v){return norm(v)}
+function cleanSeries(v){return String(v??'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function inferSeriesFromId(id){
+  const x=cleanSeries(id);
+  const fin=x.match(/FIN(\d{3})/);
+  if(fin)return 'FIN'+fin[1];
+  // Prefer the well-known cohort codes first (231/232/241/242/251/252/26x/27x) wherever they
+  // appear as a standalone 3-digit group.
+  const m=x.match(/(?:^|[^0-9])(23[12]|24[12]|25[12]|26[0-9]|27[0-9])(?:$|[^0-9])/);
+  if(m)return m[1];
+  const d=x.match(/(23[12]|24[12]|25[12]|26[0-9]|27[0-9])/);
+  if(d)return d[1];
+  // Registration numbers follow PROGRAM + YY + INTAKE(1|2) + sequence, e.g. BBA201002, BBA211007,
+  // BBA221001 -- older/legacy cohorts (20x/21x/22x, before the 2023 Plan of Study) still carry a
+  // 3-digit series prefix right after the letters even though it isn't in the known-cohort list
+  // above. Capture it generically so these students get a deterministic (if approximate) plan
+  // instead of falling through to the slower, less reliable per-course-code matching heuristic.
+  const generic=x.match(/^[A-Z]+(\d{2}[12])\d*$/);
+  if(generic)return generic[1];
+  return'';
+}
+function programKey(v){
+  // STRICT PROGRAM WHITELIST.
+  // Only these four undergraduate programs are allowed into the application:
+  // BBA, BS-AF, BS-BAP and BS-FinTech. Do not classify an unknown/blank
+  // program from its course names, because that can incorrectly pull students
+  // from other programs into one of the four tabs.
+  let raw=String(v??'').trim().toUpperCase();
+  if(!raw)return'';
+  let x=norm(raw);
+  if(!x)return'';
+
+  // Reject graduate/other programs before any alias matching.
+  if(/^(MBA|MS|MPHIL|PHD|MASTER|MCOM|MCS|MIT|BTECH|BSCS|BSIT|BSEE|BCE|LLB|LLM)/.test(x))return'';
+
+  // Remove only harmless presentation qualifiers from otherwise valid labels.
+  x=x.replace(/PROGRAMME?$/,'').replace(/(\d*YEARS?)+$/,'');
+
+  // BBA — explicit aliases only.
+  if([
+    'BBA',
+    'BBA4YEARS',
+    'BACHELOROFBUSINESSADMINISTRATION'
+  ].includes(x)) return 'BBA';
+
+  // BS Accounting & Finance — explicit aliases only.
+  if([
+    'BSAF',
+    'BSAF4YEARS',
+    'BSACCOUNTINGFINANCE',
+    'BSACCOUNTINGANDFINANCE',
+    'BACHELOROFACCOUNTINGANDFINANCE',
+    'BACHELOROFACCOUNTINGFINANCE'
+  ].includes(x)) return 'BS-AF';
+
+  // BS Business Analytics / Business Analytics & Programming — explicit aliases only.
+  if([
+    'BSBAP',
+    'BSBAP4YEARS',
+    'BSBUSINESSANALYTICS',
+    'BSBUSINESSANALYTICSANDPROGRAMMING',
+    'BSBUSINESSANALYTICSPROGRAMMING',
+    'BACHELOROFBUSINESSANALYTICS',
+    'BACHELOROFBUSINESSANALYTICSANDPROGRAMMING'
+  ].includes(x)) return 'BS-BAP';
+
+  // BS FinTech — explicit aliases only.
+  if([
+    'BSFIN',
+    'BSFIN4YEARS',
+    'BSFINTECH',
+    'BSFINTECH4YEARS',
+    'BSFINTECHNOLOGY',
+    'BACHELOROFFINANCIALTECHNOLOGY'
+  ].includes(x)) return 'BS-Fin';
+
+  return '';
+}
+
+const ALLOWED_PROGRAMS = new Set(['BBA','BS-AF','BS-BAP','BS-Fin']);
+
+function filterAllowedStudentRecords(rows){
+  // Normalize the program on every row and DROP everything else immediately.
+  // This happens before grouping, rendering, counting, auditing or exporting.
+  return (rows||[]).map(r=>{
+    const p=programKey(r.program);
+    return p ? {...r, program:p} : null;
+  }).filter(Boolean);
+}
+function isIncompleteCourseId(code){return ['MS-','HU-','BS-',''].includes(String(code||'').trim().toUpperCase())||!courseId(code)}
+function inferProgramFromCourses(rows){
+  const ids=rows.map(r=>courseId(r.course));
+  const scores={BBA:0,'BS-AF':0,'BS-BAP':0,'BS-Fin':0};
+  for(const p of Object.keys(PLANS)){
+    for(const v of Object.keys(PLANS[p]||{})){
+      for(const c of planRows(p,v)){
+        if(!c.code||c.code.includes('XXXX')||c.code.includes('XXX')||isIncompleteCourseId(c.code))continue;
+        if(ids.includes(courseId(c.code)))scores[p]++;
+      }
+    }
+  }
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  return sorted[0]?.[1]>0?sorted[0][0]:'BBA';
+}
+function seriesCode(v){return cleanSeries(v)}
+function planLabel(v){return PLAN_LABELS[v]||PLAN_LABELS['2023']}
+function planShort(v){return PLAN_SHORT[v]||v}
+function pillClass(v){return v==='F26'?'pF26':(v==='2025'?'p2025':'p2023')}
+
+// Digit-based default mapping for cohorts not explicitly listed in SERIES_RULES.
+function defaultPlanForSeriesNumber(program,n){
+  if(program==='BS-Fin') return 'F26';
+  if(program==='BBA' && n>=201 && n<=211) return '2019';
+  if((program==='BBA'||program==='BS-AF') && (n===212||n===221||n===222)) return '2021';
+  if(n===231||n===232||n===241) return '2023';
+  if(n===242||n===251||n===252) return '2025';
+  if(n>=261) return 'F26';
+  if(n<242) return '2023';
+  if(n<261) return '2025';
+  return 'F26';
+}
+
+function getPlan(program,series,rows=[]){
+  const s=seriesCode(series)||inferSeriesFromId(rows[0]?.id);
+  const rules=SERIES_RULES[program]||{};
+  // 1) explicit override rules (exact series match) take priority
+  for(const v of PLAN_VERSIONS){
+    if((rules[v]||[]).some(x=>seriesCode(x)===s)) return v;
+  }
+  // 2) digit-based cohort default
+  const digits=s.match(/(\d{3})/);
+  if(digits){
+    const n=Number(digits[1]);
+    return defaultPlanForSeriesNumber(program,n);
+  }
+  // 3) BS-Fin only ever has the Fall 2026 plan
+  if(program==='BS-Fin') return 'F26';
+  // 4) no series info at all: try to infer from which plan's course codes best match the uploaded rows
+  if(rows.length){
+    const scored=PLAN_VERSIONS.map(v=>[v,planRows(program,v).filter(c=>c.code&&!isIncompleteCourseId(c.code)&&!c.code.includes('XXXX')&&!c.code.includes('XXX')).reduce((n,c)=>n+(rows.some(r=>courseId(r.course)===courseId(c.code))?1:0),0)]).sort((a,b)=>b[1]-a[1]);
+    if(scored[0][1]>0 && scored[0][1]>scored[1][1]) return scored[0][0];
+  }
+  return '2023';
+}
+
+function keyOf(r){return [seriesCode(r.series||inferSeriesFromId(r.id)),String(r.id||'').trim(),String(r.name||'').trim()].join('|')}
+
+function parseDelimited(text){
+  text=text.replace(/^\uFEFF/,'');
+  const lines=text.split(/\r?\n/).filter(x=>x.trim()!=='');
+  if(!lines.length)return[];
+  const delim=(lines[0].match(/\t/g)||[]).length>(lines[0].match(/,/g)||[]).length?'\t':',';
+  function split(s){let a=[],cur='',q=false;for(let i=0;i<s.length;i++){let c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){cur+='"';i++}else q=!q}else if(c===delim&&!q){a.push(cur);cur=''}else cur+=c}a.push(cur);return a.map(x=>x.trim())}
+  return parseRows(split(lines[0]), lines.slice(1).map(split));
+}
+function headerIndex(headers, aliases){const h=headers.map(norm); for(const a of aliases){const i=h.indexOf(norm(a));if(i>=0)return i} return -1}
+function parseRows(headers, dataRows){
+  const idx={
+    id:headerIndex(headers,['Registration Number','Registration No','Registration No.','Reg No','Reg No.','Student ID','StudentID','Roll No','Roll Number']),
+    name:headerIndex(headers,['Student Name','StudentName','Name']),
+    father:headerIndex(headers,['Father Name','FatherName']),
+    program:headerIndex(headers,['Program','Degree','Program Name','Programme']),
+    series:headerIndex(headers,['Series','Batch','Cohort']),
+    classSection:headerIndex(headers,['Class and Section','Class/Section','Class & Section','Section','Class']),
+    course:headerIndex(headers,['Course Code','CourseCode','Course ID','CourseID','Subject Code','SubjectCode','Code']),
+    courseName:headerIndex(headers,['Course Title','Course Name','CourseName','Subject Name','Subject Title','Title']),
+    ch:headerIndex(headers,['Credit Hours','CreditHours','CH','Credits','Credit Hour']),
+    semester:headerIndex(headers,['Semester','Sem']),
+    status:headerIndex(headers,['Academic Status','Enrollment Status','Status'])
+  };
+  return dataRows.map(a=>{
+    const r={
+      id:idx.id>=0?String(a[idx.id]??'').trim():'',
+      name:idx.name>=0?String(a[idx.name]??'').trim():'',
+      father:idx.father>=0?String(a[idx.father]??'').trim():'',
+      program:idx.program>=0?String(a[idx.program]??'').trim():'',
+      series:idx.series>=0?String(a[idx.series]??'').trim():'',
+      course:idx.course>=0?String(a[idx.course]??'').trim():'',
+      courseName:idx.courseName>=0?String(a[idx.courseName]??'').trim():'',
+      ch:idx.ch>=0?String(a[idx.ch]??'').trim():'',
+      semester:idx.semester>=0?String(a[idx.semester]??'').trim():'',
+      status:idx.status>=0?String(a[idx.status]??'').trim():''
+    };
+    const classSectionRaw=idx.classSection>=0?String(a[idx.classSection]??'').trim():'';
+    // "Class and Section"-style columns (e.g. "BS-AF-6", "BS-CS-7G") encode Program-Semester(-Section)
+    // for THAT course row, not the student's batch/series -- and it varies row to row for the same
+    // student across a transcript. Never use it as series; only mine it for a semester number when
+    // no explicit Semester column was provided.
+    if(!r.semester && classSectionRaw){
+      const m=classSectionRaw.match(/(\d{1,2})\s*[A-Za-z]{0,2}$/);
+      if(m){const n=Number(m[1]); if(n>=1&&n<=12) r.semester=String(n);}
+    }
+    if(!r.series) r.series=inferSeriesFromId(r.id);
+    return r;
+  }).filter(r=>r.course||r.id||r.name);
+}
+function parseExcelArrayBuffer(buf, filename){
+  if(typeof XLSX==='undefined') throw new Error('Excel reader could not be loaded. Please allow internet access once to load the Excel reader library.');
+  const wb=XLSX.read(buf,{type:'array',cellDates:false,raw:false});
+  const preferred=wb.SheetNames.find(n=>norm(n)==='LISTOFENROLLMENTS') || wb.SheetNames.find(n=>/enroll|student|offering|course/i.test(n)) || wb.SheetNames[0];
+  const ws=wb.Sheets[preferred];
+  if(!ws) throw new Error('No worksheet found in '+filename);
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+  if(!rows.length) return [];
+  let hi=0, best=-1;
+  for(let i=0;i<Math.min(rows.length,25);i++){
+    const h=rows[i].map(v=>String(v??''));
+    const score=['Registration Number','Registration No','Reg No','Student Name','Name','Course Code','Course Title','Course Name','Program','Degree'].reduce((n,a)=>n+(headerIndex(h,[a])>=0?1:0),0);
+    if(score>best){best=score;hi=i;}
+  }
+  return parseRows(rows[hi].map(v=>String(v??'')),rows.slice(hi+1));
+}
+function readStudentFile(file){
+  const ext=file.name.toLowerCase().split('.').pop();
+  return new Promise((resolve,reject)=>{
+    const rd=new FileReader();
+    rd.onerror=()=>reject(new Error('Could not read the file.'));
+    rd.onload=()=>{try{
+      const parsed=(ext==='xls'||ext==='xlsx')
+        ? parseExcelArrayBuffer(rd.result,file.name)
+        : parseDelimited(String(rd.result));
+      // IMPORTANT: filter at import time so non-target programs never enter
+      // records and therefore cannot appear in any tab, count, audit or export.
+      resolve(filterAllowedStudentRecords(parsed));
+    }catch(e){reject(e)}};
+    if(ext==='xls'||ext==='xlsx') rd.readAsArrayBuffer(file); else rd.readAsText(file);
+  });
+}
+
+function planRows(program,version){let out=[]; for(const [sem,cs] of Object.entries(PLANS[program]?.[version]||{}))for(const c of cs)out.push({...c,sem}); return out}
+function studentGroups(){
+  const map=new Map();
+  for(const r0 of records){
+    const r={...r0};
+    if(!r.series)r.series=inferSeriesFromId(r.id);
+    const explicitProgram=String(r.program??'').trim();
+    const p=programKey(explicitProgram);
+    const k=keyOf({...r,program:p,series:r.series});
+    if(!map.has(k))map.set(k,{key:k,id:r.id,name:r.name,program:p,series:r.series,plan:'2023',rows:[],explicitProgram});
+    map.get(k).rows.push(r);
+  }
+  const out=[];
+  for(const g of map.values()){
+    if(!g.series)g.series=inferSeriesFromId(g.id);
+    // Do NOT infer a missing/unknown program from course codes.
+    // A student must have an explicitly recognized target program.
+    if(!ALLOWED_PROGRAMS.has(g.program))continue;
+    g.plan=getPlan(g.program,g.series,g.rows);
+    out.push(g);
+  }
+  return out;
+}
+function courseMatch(a,b){return courseId(a)===courseId(b)}
+// Elective placeholder codes vary by program: BBA/BS-BAP use "MS-XXXX", BS-AF uses "MS-42XX"/"MS-42xx"
+// (only 2 X's). Match any run of 2+ X's so all variants are recognized.
+function isPlaceholder(code){return /X{2,}/i.test(String(code||''))}
+function planCourseMatches(r,c){
+  if(isPlaceholder(c.code))return false;
+  if(!isIncompleteCourseId(c.code)&&courseMatch(r.course,c.code))return true;
+  if(c.name&&norm(r.courseName)===norm(c.name))return true;
+  return false;
+}
+function semNum(v){return String(v||'').replace(/[^0-9]/g,'')}
+
+// Elective pool matching: a named/coded elective course (from the official Plan of Study's
+// elective list) that a student took, checked against the ELECTIVES pool for their program.
+function electiveCourseMatches(r,e){
+  if(e.code&&!isIncompleteCourseId(e.code)&&courseMatch(r.course,e.code))return true;
+  if(e.name&&norm(r.courseName)===norm(e.name))return true;
+  return false;
+}
+function findElectivePoolMatch(r,program){
+  const pool=ELECTIVES[program]||[];
+  return pool.find(e=>electiveCourseMatches(r,e));
+}
+function isElectiveType(t){return t==='ELECTIVE SLOT'||t==='ELECTIVE (POOL)'}
+
+function matchOffered(r,plan,program){
+  const exact=plan.find(c=>planCourseMatches(r,c));
+  if(exact)return {c:exact,type:'IN PLAN'};
+  const sem=semNum(r.semester);
+  if(sem){
+    const elective=plan.find(c=>isPlaceholder(c.code)&&String(c.sem)===sem);
+    if(elective)return {c:elective,type:'ELECTIVE SLOT'};
+  }
+  // Fallback: course matches the program's official elective pool (Annex electives list),
+  // even if it was offered in a semester other than the plan's generic Elective-I/II slot.
+  // Only applies if the plan actually has elective slots at all.
+  if(program){
+    const anySlot=plan.find(c=>isPlaceholder(c.code));
+    if(anySlot){
+      const poolMatch=findElectivePoolMatch(r,program);
+      if(poolMatch)return {c:{...anySlot,code:poolMatch.code||anySlot.code,name:poolMatch.name},type:'ELECTIVE (POOL)'};
+    }
+  }
+  return null;
+}
+
+// Electives that are part of the program's approved elective pool but were not offered/taken
+// by any student currently in view. Informational only — not a compliance gap like NC, since
+// electives are optional by nature (students only need to fill their elective slots, not take
+// every course in the pool).
+function electivePoolNotOffered(list,program){
+  const pool=ELECTIVES[program]||[];
+  if(!pool.length)return [];
+  const offeredCodes=new Set(), offeredNames=new Set();
+  for(const s of list){
+    for(const r of s.rows){
+      if(r.course)offeredCodes.add(courseId(r.course));
+      if(r.courseName)offeredNames.add(norm(r.courseName));
+    }
+  }
+  return pool.filter(e=>{
+    const codeHit=e.code&&!isIncompleteCourseId(e.code)&&offeredCodes.has(courseId(e.code));
+    const nameHit=e.name&&offeredNames.has(norm(e.name));
+    return !codeHit&&!nameHit;
+  });
+}
+
+// Plan courses required for a semester the student has data in, but that were not
+// found among the student's uploaded/offered courses for that same semester -> NC.
+function notConducted(s){
+  const plan=planRows(s.program,s.plan);
+  const enrolled=s.rows.filter(r=>r.course);
+  const dataSemesters=[...new Set(enrolled.map(r=>semNum(r.semester)).filter(Boolean))];
+  const nc=[];
+  for(const sem of dataSemesters){
+    const rowsForSem=enrolled.filter(r=>semNum(r.semester)===sem);
+    const planForSem=plan.filter(c=>String(c.sem)===sem&&!isPlaceholder(c.code)&&!isIncompleteCourseId(c.code));
+    for(const c of planForSem){
+      const found=rowsForSem.some(r=>planCourseMatches(r,c));
+      if(!found) nc.push(c);
+    }
+  }
+  return nc;
+}
+
+function renderTabs(){const ps=['BBA','BS-AF','BS-BAP','BS-Fin']; $('tabs').innerHTML=ps.map(p=>`<button class="tab ${p===activeProgram?'active':''}" data-prog="${p}">${p==='BS-Fin'?'BS-FinTech':p}</button>`).join(''); $('tabs').querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setProgram(b.dataset.prog)))}
+function populateFilters(gs){const vals=[...new Set(gs.map(s=>s.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));const cur=$('seriesFilter').value;$('seriesFilter').innerHTML='<option value="">All series</option>'+vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}
+
+function filteredStudents(){
+  const gs=studentGroups().filter(s=>s.program===activeProgram);
+  populateFilters(gs);
+  const q=norm($('studentSearch').value), sf=$('seriesFilter').value, pf=$('planFilter').value;
+  return gs.filter(s=>(!q||norm(s.id).includes(q)||norm(s.name).includes(q)||norm(s.series).includes(q))&&(!sf||s.series===sf)&&(!pf||s.plan===pf));
+}
+
+// Offered courses for a student that were taken/offered but are NOT part of their applicable Plan of Study
+// (i.e. no IN PLAN or ELECTIVE SLOT match was found).
+function notInPlan(s){
+  const plan=planRows(s.program,s.plan);
+  const enrolled=[...new Map(s.rows.filter(r=>r.course).map(r=>[courseId(r.course)||norm(r.course),r])).values()];
+  return enrolled.filter(r=>!matchOffered(r,plan,s.program));
+}
+
+function renderViewTabs(ncCount,nipCount,epCount,resultCount){
+  return `<div class="tabs" style="margin-bottom:12px"><button class="tab ${activeView==='students'?'active':''}" id="viewStudents">Students</button><button class="tab ${activeView==='nc'?'active':''}" id="viewNC">NC Report ${ncCount?`(${ncCount})`:''}</button><button class="tab ${activeView==='notinplan'?'active':''}" id="viewNotInPlan">Not In Plan ${nipCount?`(${nipCount})`:''}</button><button class="tab ${activeView==='electivepool'?'active':''}" id="viewElectivePool">Electives Not Offered ${epCount?`(${epCount})`:''}</button><button class="tab ${activeView==='resultreport'?'active':''}" id="viewResultReport">Result Report ${resultCount?`(${resultCount})`:''}</button><button class="tab ${activeView==='excelpsrn'?'active':''}" id="viewExcelPSRN">PSRN Style — Excel / Zero Grades</button></div>`;
+}
+
+function render(){
+  renderTabs();
+  const filtered=filteredStudents();
+  $('rowCount').textContent=`${filtered.length} student(s)`;
+  const resultCountForTab=resultGroups().filter(g=>g.program===activeProgram).length;
+
+  if(activeView==='excelpsrn'){
+    $('app').innerHTML=renderViewTabs(0,0,0,resultCountForTab)+renderExcelPSRNReport();
+    wireViewTabButtons();
+    const xp=document.getElementById('exportExcelPsrnBtn');
+    if(xp)xp.addEventListener('click',exportExcelPSRNReport);
+    return;
+  }
+  if(activeView==='resultreport'||(!filtered.length&&resultCountForTab)){
+    if(!filtered.length)activeView='resultreport';
+    $('app').innerHTML=renderViewTabs(0,0,0,resultCountForTab)+renderResultReport();
+    wireViewTabButtons();
+    return;
+  }
+  if(!filtered.length){$('app').innerHTML=renderViewTabs(0,0,0,resultCountForTab)+'<div class="card empty">Upload enrollment/offering data to begin, or select another program tab.</div>';wireViewTabButtons();return}
+  if(!activeStudentKey||!filtered.some(s=>s.key===activeStudentKey))activeStudentKey=filtered[0].key;
+  const s=filtered.find(x=>x.key===activeStudentKey)||filtered[0];
+
+  const ncAll=filtered.map(st=>({s:st,nc:notConducted(st)}));
+  const ncTotal=ncAll.reduce((n,x)=>n+x.nc.length,0);
+  const nipAll=filtered.map(st=>({s:st,nip:notInPlan(st)}));
+  const nipTotal=nipAll.reduce((n,x)=>n+x.nip.length,0);
+  const epList=electivePoolNotOffered(filtered,activeProgram);
+
+  let body;
+  if(activeView==='nc'){
+    body=renderNCReport(ncAll);
+  }else if(activeView==='notinplan'){
+    body=renderNotInPlanReport(nipAll);
+  }else if(activeView==='electivepool'){
+    body=renderElectivePoolReport(epList);
+  }else{
+    body=`<div class="grid"><div class="card student-list">${filtered.map(x=>`<div class="student ${x.key===s.key?'active':''}" data-key="${esc(x.key)}"><b>${esc(x.name||'Unnamed')}</b><div class="muted">${esc(x.id)} &middot; ${esc(x.series||'No series')} <span class="pill ${pillClass(x.plan)}">${planShort(x.plan)}</span></div></div>`).join('')}</div><div>${auditCard(s)}</div></div>`;
+  }
+
+  $('app').innerHTML=renderViewTabs(ncTotal,nipTotal,epList.length,resultCountForTab)+body;
+
+  $('app').querySelectorAll('.student[data-key]').forEach(el=>el.addEventListener('click',()=>selectStudent(el.dataset.key)));
+  wireViewTabButtons();
+  const ncExport=document.getElementById('exportNcBtn');
+  if(ncExport)ncExport.addEventListener('click',exportNCReport);
+  const nipExport=document.getElementById('exportNotInPlanBtn');
+  if(nipExport)nipExport.addEventListener('click',exportNotInPlanReport);
+  const epExport=document.getElementById('exportElectivePoolBtn');
+  if(epExport)epExport.addEventListener('click',exportElectivePoolReport);
+}
+
+function wireViewTabButtons(){
+  const vs=document.getElementById('viewStudents'), vn=document.getElementById('viewNC'), vnip=document.getElementById('viewNotInPlan'), vep=document.getElementById('viewElectivePool'), vrr=document.getElementById('viewResultReport'), vxp=document.getElementById('viewExcelPSRN');
+  if(vs)vs.addEventListener('click',()=>{activeView='students';render()});
+  if(vn)vn.addEventListener('click',()=>{activeView='nc';render()});
+  if(vnip)vnip.addEventListener('click',()=>{activeView='notinplan';render()});
+  if(vep)vep.addEventListener('click',()=>{activeView='electivepool';render()});
+  if(vrr)vrr.addEventListener('click',()=>{activeView='resultreport';render()});
+  if(vxp)vxp.addEventListener('click',()=>{activeView='excelpsrn';render()});
+}
+
+function renderElectivePoolReport(epList){
+  if(!ELECTIVES[activeProgram]||!ELECTIVES[activeProgram].length){
+    return `<div class="card empty">No elective pool has been loaded for ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram} yet. Add one via the Plan &amp; Series Manager.</div>`;
+  }
+  if(!epList.length){
+    return `<div class="card empty">Every elective in the ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram} elective pool has been offered/taken by at least one student currently in view.</div>`;
+  }
+  return `<div class="card"><div class="section-title"><div><h2 style="margin:0">Electives Not Offered &mdash; ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}</h2><div class="muted">Courses from this program's approved elective pool that were not offered/taken by any student currently in view. These are <b>not</b> NC/compliance gaps &mdash; electives are optional by nature; a student only needs to fill their elective slots, not take every course in the pool. ${epList.length} course(s) in the pool remain unoffered.</div></div><div class="row-actions"><button class="btn secondary" id="exportElectivePoolBtn">Export List (CSV)</button></div></div>
+  <div style="overflow:auto"><table><thead><tr><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${epList.map(e=>`<tr><td class="course-code">${esc(e.code||'&mdash;')}</td><td>${esc(e.name)}</td><td>${esc(e.ch)}</td><td class="status extra">IN ELECTIVE POOL &mdash; NOT OFFERED</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function exportElectivePoolReport(){
+  const filtered=filteredStudents();
+  const epList=electivePoolNotOffered(filtered,activeProgram);
+  const rows=[['Program','Course Code','Course Name','CH','Status']];
+  for(const e of epList)rows.push([activeProgram,e.code,e.name,e.ch,'IN ELECTIVE POOL - NOT OFFERED']);
+  exportCSV(rows,`${activeProgram}_electives_not_offered.csv`);
+}
+
+function renderNCReport(ncAll){
+  const rows=[];
+  for(const {s,nc} of ncAll){
+    for(const c of nc) rows.push({s,c});
+  }
+  if(!rows.length){
+    return `<div class="card empty">No NC (plan course not offered) entries found for the students currently in view.</div>`;
+  }
+  rows.sort((a,b)=> (a.s.name||a.s.id).localeCompare(b.s.name||b.s.id) || Number(a.c.sem)-Number(b.c.sem));
+  return `<div class="card"><div class="section-title"><div><h2 style="margin:0">NC Report &mdash; ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}</h2><div class="muted">Plan courses required for a semester the student has data in, that were not found among the uploaded offered courses for that semester. ${rows.length} NC entr${rows.length===1?'y':'ies'} across ${new Set(rows.map(r=>r.s.key)).size} student(s).</div></div><div class="row-actions"><button class="btn secondary" id="exportNcBtn">Export NC List (CSV)</button></div></div>
+  <div style="overflow:auto"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Series</th><th>Plan</th><th>Plan Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${rows.map(({s,c})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.series)}</td><td>${esc(planLabel(s.plan))}</td><td>${esc(c.sem)}</td><td class="course-code">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function exportNCReport(){
+  const filtered=filteredStudents();
+  const rows=[['Student ID','Student Name','Program','Series','Plan','Plan Semester','Course Code','Course Name','CH','Status']];
+  for(const s of filtered){
+    for(const c of notConducted(s)){
+      rows.push([s.id,s.name,s.program,s.series,planLabel(s.plan),c.sem,c.code,c.name,c.ch,'NC']);
+    }
+  }
+  exportCSV(rows,`${activeProgram}_NC_report.csv`);
+}
+
+// Consolidated view: courses a student was offered/took that are NOT part of their Plan of Study.
+function renderNotInPlanReport(nipAll){
+  const rows=[];
+  for(const {s,nip} of nipAll){
+    for(const r of nip) rows.push({s,r});
+  }
+  if(!rows.length){
+    return `<div class="card empty">No "Not In Plan" entries found for the students currently in view &mdash; every offered course matched its Plan of Study.</div>`;
+  }
+  rows.sort((a,b)=> (a.s.name||a.s.id).localeCompare(b.s.name||b.s.id) || semNum(a.r.semester).localeCompare(semNum(b.r.semester)));
+  return `<div class="card"><div class="section-title"><div><h2 style="margin:0">Not In Plan Report &mdash; ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}</h2><div class="muted">Courses that were offered to / taken by a student but are not part of their applicable Plan of Study. ${rows.length} entr${rows.length===1?'y':'ies'} across ${new Set(rows.map(r=>r.s.key)).size} student(s).</div></div><div class="row-actions"><button class="btn secondary" id="exportNotInPlanBtn">Export Not In Plan List (CSV)</button></div></div>
+  <div style="overflow:auto"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Series</th><th>Plan</th><th>Offered Course Code</th><th>Course Name</th><th>CH</th><th>Data Semester</th><th>Status</th></tr></thead><tbody>${rows.map(({s,r})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.series)}</td><td>${esc(planLabel(s.plan))}</td><td class="course-code">${esc(r.course)}</td><td>${esc(r.courseName)}</td><td>${esc(r.ch)}</td><td>${esc(r.semester)}</td><td class="status extra">NOT IN PLAN</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function exportNotInPlanReport(){
+  const filtered=filteredStudents();
+  const rows=[['Student ID','Student Name','Program','Series','Plan','Offered Course Code','Course Name','CH','Data Semester','Status']];
+  for(const s of filtered){
+    for(const r of notInPlan(s)){
+      rows.push([s.id,s.name,s.program,s.series,planLabel(s.plan),r.course,r.courseName,r.ch,r.semester,'NOT IN PLAN']);
+    }
+  }
+  exportCSV(rows,`${activeProgram}_not_in_plan_report.csv`);
+}
+
+function auditCard(s){
+  const plan=planRows(s.program,s.plan);
+  const enrolled=[...new Map(s.rows.filter(r=>r.course).map(r=>[courseId(r.course)||norm(r.course),r])).values()];
+  const offered=enrolled.map(r=>({r,m:matchOffered(r,plan,s.program)}));
+  let inPlan=0,notInPlan=0,elective=0;
+  offered.forEach(x=>{if(x.m?.type==='IN PLAN')inPlan++;else if(isElectiveType(x.m?.type))elective++;else notInPlan++});
+  const nc=notConducted(s);
+  return `<div class="card"><div class="section-title"><div><h2 style="margin:0">${esc(s.name||'Unnamed')}</h2><div class="planVersion">${esc(s.id)} &middot; ${esc(s.program)} &middot; Series ${esc(s.series||'')} &middot; <b>${planLabel(s.plan)}</b></div></div><div class="row-actions"><button class="btn secondary" onclick="exportStudent('${encodeURIComponent(s.key)}')">Export Student</button></div></div>
+  <div class="stats"><div class="stat"><b>${offered.length}</b><span>Courses offered</span></div><div class="stat"><b>${inPlan}</b><span>Found in plan</span></div><div class="stat"><b class="extra">${notInPlan}</b><span>Not in plan</span></div><div class="stat"><b>${elective}</b><span>Elective slots</span></div><div class="stat"><b class="nc">${nc.length}</b><span>Plan courses not offered (NC)</span></div></div>
+  <div style="margin-top:14px;overflow:auto"><table><thead><tr><th>Offered Course Code</th><th>Course</th><th>CH</th><th>Data Semester</th><th>Plan Semester</th><th>Status</th><th>Plan Course ID</th></tr></thead><tbody>${offered.map(x=>{const r=x.r,m=x.m;return `<tr><td class="course-code ${m?'':'extra'}">${esc(r.course)}</td><td>${esc(r.courseName)}</td><td>${esc(r.ch)}</td><td>${esc(r.semester)}</td><td>${esc(m?.c?.sem||'—')}</td><td class="status ${m?.type==='IN PLAN'?'ok':isElectiveType(m?.type)?'ok':'extra'}">${m?.type||'NOT IN PLAN'}</td><td>${esc(m?.c?.code||'—')}</td></tr>`}).join('')||'<tr><td colspan="7" class="empty">No offered courses in the uploaded data for this student.</td></tr>'}</tbody></table></div>
+  <div class="ncBox"><h3>Plan Courses Not Offered (NC) &mdash; ${nc.length} course(s)</h3><div style="overflow:auto"><table><thead><tr><th>Plan Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${nc.map(c=>`<tr><td>${esc(c.sem)}</td><td class="course-code">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(c.ch)}</td><td class="status nc">NC</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No missing plan courses detected for the semesters present in the uploaded data.</td></tr>'}</tbody></table></div></div>
+  </div>`;
+}
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function setProgram(p){activeProgram=p;activeStudentKey=null;render()}
+function selectStudent(k){activeStudentKey=k;render()}
+function exportCSV(rows,filename){const esc2=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const text=rows.map(r=>r.map(esc2).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=filename;a.click()}
+
+// Builds the full flat row set (offered-course audit rows + NC rows) for a list of students.
+function buildAuditRows(list){
+  const rows=[['Student ID','Student Name','Program','Series','Plan','Offered Course Code','Course','CH','Data Semester','Plan Semester','Status','Plan Course ID']];
+  for(const s of list){
+    const plan=planRows(s.program,s.plan);
+    const enr=[...new Map(s.rows.filter(r=>r.course).map(r=>[courseId(r.course)||norm(r.course),r])).values()];
+    for(const r of enr){
+      const m=matchOffered(r,plan,s.program);
+      rows.push([s.id,s.name,s.program,s.series,planLabel(s.plan),r.course,r.courseName,r.ch,r.semester,m?.c?.sem||'',m?.type||'NOT IN PLAN',m?.c?.code||'']);
+    }
+    for(const c of notConducted(s)){
+      rows.push([s.id,s.name,s.program,s.series,planLabel(s.plan),'',c.name,c.ch,c.sem,c.sem,'NC',c.code]);
+    }
+  }
+  return rows;
+}
+
+function exportXLSX(){
+  if(typeof XLSX==='undefined'){alert('Excel export library is not available.');return}
+  const rows=buildAuditRows(filteredStudents());
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Offered Course Audit');
+  XLSX.writeFile(wb,`${activeProgram}_offered_course_audit.xlsx`);
+}
+function exportStudent(encoded){
+  const k=decodeURIComponent(encoded),s=studentGroups().find(x=>x.key===k);
+  if(!s)return;
+  exportCSV(buildAuditRows([s]),`${s.id||s.name||'student'}_offered_course_audit.csv`);
+}
+function exportAll(){
+  exportCSV(buildAuditRows(filteredStudents()),`${activeProgram}_offered_course_audit.csv`);
+}
+function sample(){
+  exportCSV([
+    ['Student ID','Student Name','Program','Series','Course Code','Course Name','Semester'],
+    ['231001','Example Student','BBA','231','MS-1801','Islamic Studies / Ethics','1'],
+    ['231001','Example Student','BBA','231','MS-1101','Principles of Management','1'],
+    ['242001','Example 2025 Cohort','BBA','242','BS-1021','Business Mathematics','1'],
+    ['261001','Example Fall 2026','BBA','261','BS-1021','Business Mathematics','1'],
+    ['FIN261001','Example FinTech','BS-Fin','FIN261','MS-1203','Fundamentals of FinTech','2'],
+    ['231002','Example Extra','BBA','231','MS-9999','Non-plan Course','5']
+  ],'student_enrollment_template.csv');
+}
+
+function showManagerMsg(msg){$('managerMsg').textContent=msg;$('managerMsg').classList.remove('hidden');setTimeout(()=>{$('managerMsg').classList.add('hidden')},4000)}
+
+function renderRules(){
+  const rows=[];
+  for(const p of ['BBA','BS-AF','BS-BAP','BS-Fin'])
+    for(const v of PLAN_VERSIONS)
+      rows.push(`<tr><td><select class="editcell ruleProgram" disabled>${['BBA','BS-AF','BS-BAP','BS-Fin'].map(x=>`<option ${x===p?'selected':''}>${x}</option>`).join('')}</select></td><td><select class="editcell rulePlan" disabled>${PLAN_VERSIONS.map(x=>`<option value="${x}" ${x===v?'selected':''}>${PLAN_LABELS[x]}</option>`).join('')}</select></td><td><input class="editcell ruleSeries" value="${esc((SERIES_RULES[p]?.[v]||[]).join(', '))}"></td><td><button class="iconbtn saveRule" data-p="${p}" data-v="${v}">Save</button></td></tr>`);
+  $('rulesBody').innerHTML=rows.join('');
+  document.querySelectorAll('.saveRule').forEach(btn=>btn.addEventListener('click',()=>{
+    const tr=btn.closest('tr'),p=btn.dataset.p,v=btn.dataset.v,arr=tr.querySelector('.ruleSeries').value.split(',').map(x=>x.trim()).filter(Boolean);
+    if(!SERIES_RULES[p])SERIES_RULES[p]={};
+    SERIES_RULES[p][v]=arr;
+    render();
+    showManagerMsg(`Saved ${p} ${PLAN_LABELS[v]} series rule.`);
+  }));
+}
+
+function fillSemesters(){const sem=$('editSemester');const current=sem.value||'1';sem.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i+1}">Semester ${i+1}</option>`).join('');sem.value=current}
+function renderCourses(){
+  fillSemesters();
+  const p=$('editProgram').value,v=$('editPlan').value,sem=$('editSemester').value;
+  const arr=(PLANS[p]?.[v]?.[sem]||[]);
+  $('coursesBody').innerHTML=arr.map((c,i)=>`<tr><td>${sem}</td><td><input class="editcell ccode" value="${esc(c.code)}"></td><td><input class="editcell cname" value="${esc(c.name)}"></td><td><input class="editcell cch" type="number" min="0" step="0.5" value="${Number(c.ch)||0}"></td><td><button class="iconbtn saveCourse" data-i="${i}">Save</button> <button class="iconbtn deleteCourse" data-i="${i}">Delete</button></td></tr>`).join('')||`<tr><td colspan="5" class="empty">No courses in this semester.</td></tr>`;
+  document.querySelectorAll('.saveCourse').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.i),tr=b.closest('tr');PLANS[p][v][sem][i]={code:tr.querySelector('.ccode').value.trim(),name:tr.querySelector('.cname').value.trim(),ch:Number(tr.querySelector('.cch').value)||0};render();renderCourses();showManagerMsg('Course updated.') }));
+  document.querySelectorAll('.deleteCourse').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.i);PLANS[p][v][sem].splice(i,1);render();renderCourses();showManagerMsg('Course deleted.') }));
+}
+function openManager(){ $('manager').classList.remove('hidden');renderRules();renderCourses(); }
+function downloadPlanTemplate(){
+  exportCSV([
+    ['Program','Plan','Semester','Course Code','Course Name','CH'],
+    ['BBA','2023','1','MS-1801','Example Course',3],
+    ['BBA','2025','1','BS-1021','Business Mathematics and Statistics',3],
+    ['BS-AF','Fall 2026','1','HU-1204','Islamic Studies / Ethics',3],
+    ['BS-BAP','Fall 2026','1','HU-1204','Islamic Studies / Ethics',3],
+    ['BS-Fin','Fall 2026','1','FIN-XXXX','Example FinTech Course',3]
+  ],'plan_of_study_template.csv');
+}
+function downloadCurrentPlans(){
+  const rows=[['Program','Plan','Semester','Course Code','Course Name','CH']];
+  for(const p of Object.keys(PLANS))for(const v of Object.keys(PLANS[p]||{}))for(const sem of Object.keys(PLANS[p][v]||{}))for(const c of PLANS[p][v][sem])rows.push([p,v,sem,c.code,c.name,c.ch]);
+  exportCSV(rows,'current_plans_of_study.csv');
+}
+function parsePlanJSON(text){
+  const data=JSON.parse(text);
+  if(data.PLANS)Object.assign(PLANS,data.PLANS);
+  if(data.SERIES_RULES)Object.assign(SERIES_RULES,data.SERIES_RULES);
+  for(const p of ['BBA','BS-AF','BS-BAP','BS-Fin']){
+    if(!SERIES_RULES[p])SERIES_RULES[p]={};
+    for(const v of PLAN_VERSIONS)if(!SERIES_RULES[p][v])SERIES_RULES[p][v]=[];
+  }
+  return true;
+}
+function planVersionFromText(v){
+  const t=String(v||'').toLowerCase();
+  if(t.includes('2019')||t.includes('fall-2019')||t.includes('fall 2019'))return '2019';
+  if(t.includes('2021')||t.includes('roadmap'))return '2021';
+  if(t.includes('fall')||t.includes('f26')||t.includes('f-26')||t.includes('2026'))return 'F26';
+  if(t.includes('2025'))return '2025';
+  return '2023';
+}
+function resetPlanStructures(){
+  for(const p of ['BBA','BS-AF','BS-BAP','BS-Fin']) PLANS[p]={};
+}
+function normalizePlanProgram(v){
+  const x=norm(v).replace(/TECHNOLOGY$/,'TECH');
+  if(x==='BBA'||x.includes('BACHELOROFBUSINESSADMINISTRATION'))return 'BBA';
+  if(x==='BSAF'||x==='BSACCOUNTINGFINANCE'||x==='BSACCOUNTINGANDFINANCE'||x.includes('ACCOUNTINGANDFINANCE'))return 'BS-AF';
+  if(x==='BSBAP'||x.includes('BUSINESSANALYTICS'))return 'BS-BAP';
+  if(x==='BSFIN'||x==='BSFINTECH'||x.includes('FINTECH'))return 'BS-Fin';
+  return '';
+}
+function importPlanRows(rows,{replace=true}={}){
+  if(!Array.isArray(rows)||!rows.length)throw new Error('No plan rows were found.');
+  if(replace)resetPlanStructures();
+  let count=0;
+  for(const r of rows){
+    const p=normalizePlanProgram(r.Program??r.program??r.Degree??r.degree);
+    if(!p)continue;
+    const v=planVersionFromText(r.Plan??r.plan??r['Plan Year']??r.Version??'2023');
+    const sem=String(r.Semester??r.semester??r.Sem??r.sem??'').replace(/[^0-9]/g,'');
+    const code=String(r['Course Code']??r.CourseCode??r.Code??r.code??'').trim();
+    const name=String(r['Course Name']??r.CourseName??r.Title??r.Course??r.name??'').trim();
+    const ch=Number(r.CH??r['Credit Hours']??r.Credits??r.ch??0)||0;
+    if(!sem||!code)continue;
+    if(!PLANS[p])PLANS[p]={};
+    if(!PLANS[p][v])PLANS[p][v]={};
+    if(!PLANS[p][v][sem])PLANS[p][v][sem]=[];
+    const c={code,name,ch};
+    const idx=PLANS[p][v][sem].findIndex(x=>norm(x.code)===norm(code));
+    if(idx>=0)PLANS[p][v][sem][idx]=c; else PLANS[p][v][sem].push(c);
+    count++;
+  }
+  if(!count)throw new Error('No valid plan rows matched the required columns/programs.');
+  return count;
+}
+function parsePlanWorkbook(arrayBuffer){
+  if(typeof XLSX==='undefined')throw new Error('Excel reader is not available.');
+  const wb=XLSX.read(arrayBuffer,{type:'array'});
+  let all=[];
+  for(const sheetName of wb.SheetNames){
+    const ws=wb.Sheets[sheetName];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    all=all.concat(rows);
+  }
+  return importPlanRows(all,{replace:true});
+}
+function loadPlanFile(file,sourceLabel='Uploaded Plan of Study'){
+  return new Promise((resolve,reject)=>{
+    const ext=file.name.toLowerCase().split('.').pop();
+    const rd=new FileReader();
+    rd.onerror=()=>reject(new Error('Could not read the plan file.'));
+    rd.onload=()=>{try{
+      let n=0;
+      if(ext==='xls'||ext==='xlsx') n=parsePlanWorkbook(rd.result);
+      else if(ext==='json'){resetPlanStructures();parsePlanJSON(rd.result);n=Object.values(PLANS).reduce((a,p)=>a+Object.values(p||{}).reduce((b,v)=>b+Object.values(v||{}).reduce((c,arr)=>c+(Array.isArray(arr)?arr.length:0),0),0),0);}
+      else n=parsePlanDelimited(rd.result);
+      resolve(n);
+    }catch(e){reject(e)}};
+    if(ext==='xls'||ext==='xlsx')rd.readAsArrayBuffer(file);else rd.readAsText(file);
+  });
+}
+function parsePlanDelimited(text){
+  text=text.replace(/^\uFEFF/,'');
+  const lines=text.split(/\r?\n/).filter(x=>x.trim());
+  if(!lines.length)return 0;
+  const delim=(lines[0].match(/\t/g)||[]).length>(lines[0].match(/,/g)||[]).length?'\t':',';
+  const split=s=>{let a=[],cur='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){cur+='"';i++}else q=!q}else if(c===delim&&!q){a.push(cur);cur=''}else cur+=c}a.push(cur);return a.map(x=>x.trim())};
+  const h=split(lines[0]).map(norm);
+  const ix=(...names)=>names.map(norm).map(n=>h.indexOf(n)).find(i=>i>=0)??-1;
+  const ip=ix('Program'),iv=ix('Plan','Plan Year','Version'),is=ix('Semester','Sem'),ic=ix('Course Code','Code'),inm=ix('Course Name','Course','Title'),ich=ix('CH','Credit Hours','Credits');
+  let count=0;
+  for(const line of lines.slice(1)){
+    const a=split(line),pRaw=a[ip]||'';
+    const p=['BBA','BS-AF','BS-BAP','BS-Fin'].find(x=>norm(x)===norm(pRaw))||pRaw;
+    const v=planVersionFromText(a[iv]||'2023');
+    const sem=String(a[is]||'').replace(/[^0-9]/g,'');
+    if(!PLANS[p])continue;
+    if(!PLANS[p][v])PLANS[p][v]={};
+    if(!PLANS[p][v][sem])PLANS[p][v][sem]=[];
+    const c={code:a[ic]||'',name:a[inm]||'',ch:Number(a[ich])||0};
+    if(c.code){
+      const existing=PLANS[p][v][sem].findIndex(x=>norm(x.code)===norm(c.code));
+      if(existing>=0)PLANS[p][v][sem][existing]=c;else PLANS[p][v][sem].push(c);
+      count++;
+    }
+  }
+  return count;
+}
+function reportHTML(studentList){
+  let html=`<!doctype html><html><head><meta charset="utf-8"><title>DSU Offered Course Audit Report</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#17212b}h1{color:#073b67}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #ccd6df;padding:7px;font-size:12px;text-align:left}th{background:#edf2f7}.ok{color:#0f8b5f;font-weight:700}.extra{color:#a66a00;font-weight:700}.nc{color:#c62828;font-weight:700}.studentHead{margin-top:24px;border-bottom:2px solid #073b67;padding-bottom:6px}.meta{color:#475569;font-size:13px}.subhead{font-size:14px;margin:14px 0 4px;color:#8a1c1c}</style></head><body><h1>DSU Offered Course Audit Report</h1><div class="meta">Only courses present in the uploaded enrollment/offering data are shown as "Offered". Plan courses missing from that data (for semesters present) are shown as NC. Generated ${new Date().toLocaleString()}</div>`;
+  for(const s of studentList){
+    const plan=planRows(s.program,s.plan), enr=[...new Map(s.rows.filter(r=>r.course).map(r=>[courseId(r.course)||norm(r.course),r])).values()];
+    html+=`<h2 class="studentHead">${esc(s.name||'Unnamed')}</h2><div class="meta">${esc(s.id)} &middot; ${esc(s.program)} &middot; Series ${esc(s.series)} &middot; ${planLabel(s.plan)}</div><table><thead><tr><th>Offered Course Code</th><th>Course</th><th>CH</th><th>Data Semester</th><th>Plan Semester</th><th>Status</th><th>Plan Course ID</th></tr></thead><tbody>`;
+    for(const r of enr){
+      const m=matchOffered(r,plan,s.program);
+      html+=`<tr><td>${esc(r.course)}</td><td>${esc(r.courseName)}</td><td>${esc(r.ch)}</td><td>${esc(r.semester)}</td><td>${esc(m?.c?.sem||'')}</td><td class="${m?.type==='IN PLAN'||isElectiveType(m?.type)?'ok':'extra'}">${m?.type||'NOT IN PLAN'}</td><td>${esc(m?.c?.code||'')}</td></tr>`;
+    }
+    html+='</tbody></table>';
+    const nc=notConducted(s);
+    html+=`<div class="subhead">Plan Courses Not Offered (NC) &mdash; ${nc.length} course(s)</div><table><thead><tr><th>Plan Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${nc.map(c=>`<tr><td>${esc(c.sem)}</td><td>${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(c.ch)}</td><td class="nc">NC</td></tr>`).join('')||'<tr><td colspan="5">None detected.</td></tr>'}</tbody></table>`;
+  }
+  const epNote=Object.keys(ELECTIVES).some(p=>ELECTIVES[p].length)?`<div class="meta" style="margin-top:18px">Note: courses matched against a program's official elective pool (Annex electives list) are marked ELECTIVE (POOL) and counted as in-plan, even if taken in a semester other than the plan's generic Elective-I/II slot.</div>`:'';
+  html+=epNote+'</body></html>';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`DSU_offered_course_audit_report_${new Date().toISOString().slice(0,10)}.html`;a.click();
+}
+function exportReport(){reportHTML(filteredStudents())}
+
+// ============ Result / Grade Sheet (PSRN) support ============
+let resultRecords=[];
+let resultSource='No PSRN uploaded';
+
+
+// For a PSRN/result-only student, semester values are not always printed in the
+// summary line. Infer the plan semesters represented by the student's courses,
+// then report required plan courses missing from those represented semesters.
+// This allows the uploaded PSRN to produce NCs even without a separate enrollment file.
+function resultCoursePlanStatus(g,r){
+  const plan=getPlan(g.program,g.series,g.rows.map(x=>({course:x.course,courseName:x.courseName,semester:x.semester})));
+  const planRowsForStudent=planRows(g.program,plan);
+  const m=matchOffered(r,planRowsForStudent,g.program);
+  if(m?.type==='IN PLAN') return {status:'IN PLAN',cls:'ok',planCode:m.c?.code||'',planSem:m.c?.sem||''};
+  if(isElectiveType(m?.type)) return {status:m.type,cls:'ok',planCode:m.c?.code||'',planSem:m.c?.sem||''};
+  return {status:'NC',cls:'nc',planCode:'',planSem:''};
+}
+
+function resultNCForStudent(g){
+  const plan=getPlan(g.program,g.series,g.rows.map(r=>({course:r.course})));
+  const planRowsForStudent=planRows(g.program,plan);
+  const represented=new Set();
+  for(const r of g.rows){
+    const matches=planRowsForStudent.filter(c=>planCourseMatches(r,c));
+    matches.forEach(c=>{if(c.sem&&!isPlaceholder(c.code)&&!isIncompleteCourseId(c.code))represented.add(String(c.sem))});
+  }
+  const nc=[];
+  for(const sem of represented){
+    const required=planRowsForStudent.filter(c=>String(c.sem)===sem&&!isPlaceholder(c.code)&&!isIncompleteCourseId(c.code));
+    for(const c of required){
+      const found=g.rows.some(r=>planCourseMatches(r,c));
+      if(!found)nc.push(c);
+    }
+  }
+  return nc;
+}
+
+
+function courseNameLookup(program,code){
+  const cid=courseId(code); if(!cid||!program)return'';
+  const progPlans=PLANS[program]||{};
+  for(const ver of Object.values(progPlans)){
+    for(const cs of Object.values(ver)){
+      const hit=cs.find(c=>courseId(c.code)===cid);
+      if(hit)return hit.name;
+    }
+  }
+  const pool=ELECTIVES[program]||[];
+  const hit2=pool.find(c=>courseId(c.code)===cid);
+  return hit2?hit2.name:'';
+}
+
+function isResultCourseTok(t){return /^[A-Z]{2,3}-\d{2,4}[A-Z]{0,2}$/.test(t)}
+function isResultGradeTok(t){return /^[A-F][+-]?$/.test(t)}
+
+const REMARK_CATEGORIES=[
+  {key:'Withdrawn From All Courses',test:t=>/WITHDRAWN/.test(t)&&/ALLCOURSES/.test(t.replace(/\s+/g,''))},
+  {key:'Withdrawn From Program',test:t=>/WITHDRAWN/.test(t)},
+  {key:'2nd Relegation',test:t=>/2ND/.test(t)&&/RELEGAT/.test(t)},
+  {key:'1st Relegation',test:t=>/1ST/.test(t)&&/RELEGAT/.test(t)},
+  {key:'Relegated',test:t=>/RELEGAT/.test(t)},
+  {key:'Probation',test:t=>/PROBATION/.test(t)},
+  {key:'Completed',test:t=>/COMPLETED/.test(t)},
+  {key:'Promoted',test:t=>/PROMOTED/.test(t)}
+];
+function classifyRemarks(blockText,fallback){
+  const t=blockText.toUpperCase();
+  for(const c of REMARK_CATEGORIES){if(c.test(t))return c.key}
+  return fallback||'';
+}
+
+// The PSRN's top line per student is dense and reliable: S.No, RegNo, Name, then repeating
+// (CourseCode Grade) pairs, then TotalCH, CHCompleted/CHPossible, SGPA, CGPA, and the start of
+// Remarks. Father name and wrapped course titles fall onto the following lines and are not needed
+// for auditing, so we don't attempt to parse them positionally.
+function parsePSRNSummaryLine(line){
+  const m=line.match(/^(\d+)\s+([A-Za-z]{2,4}\d{3,9})\s+(.*)$/);
+  if(!m)return null;
+  const rest=m[3].split(/\s+/).filter(Boolean);
+  let i=0,nameTokens=[];
+  while(i<rest.length&&!isResultCourseTok(rest[i])){nameTokens.push(rest[i]);i++}
+  const pairs=[];
+  while(i<rest.length-1&&isResultCourseTok(rest[i])&&isResultGradeTok(rest[i+1])){pairs.push({code:rest[i],grade:rest[i+1]});i+=2}
+  if(!pairs.length)return null;
+  const totalCH=rest[i]||'';i++;
+  const chFrac=rest[i]||'';i++;
+  const sgpa=rest[i]||'';i++;
+  const cgpa=rest[i]||'';i++;
+  const remarksTail=rest.slice(i).join(' ');
+  const chParts=chFrac.split('/');
+  return{regNo:m[2],name:nameTokens.join(' ').trim(),pairs,totalCH:Number(totalCH)||0,chCompleted:Number(chParts[0])||0,chPossible:Number(chParts[1])||0,sgpa:Number(sgpa)||0,cgpa:Number(cgpa)||0,remarksTail};
+}
+
+function extractProgramFromPSRNLines(lines){
+  for(const line of lines){
+    const m=line.match(/Program:\s*(.+?)\s*$/i);
+    if(m)return m[1].trim();
+  }
+  return'';
+}
+
+// Groups the reconstructed page lines into one block per student: a new block starts at a line
+// beginning with "S.No RegNo", and everything until the next such line (course-title wraps, father
+// name, credit-hour wraps, remarks continuation like "From Program") belongs to that student.
+function segmentPSRNBlocks(lines){
+  const blocks=[];let cur=null;
+  for(const raw of lines){
+    const line=(raw||'').trim();
+    if(!line)continue;
+    if(/^S\.?\s*No\.?\s+Reg/i.test(line))continue;
+    if(/^Provisional Semester Result|^DHA Suffa University|^Page\s+\d+\s+of\s+\d+|^Total Enrolled|^Dated:|^Checked by:|^HOD:|^Pro Vice Chancellor:|^Vice Chancellor:|^Powered by TCPDF|^Academic Year:/i.test(line))continue;
+    const m=line.match(/^(\d+)\s+([A-Za-z]{2,4}\d{3,9})\s+/);
+    if(m){if(cur)blocks.push(cur);cur={summaryLine:line,extra:[]}}
+    else if(cur){cur.extra.push(line)}
+  }
+  if(cur)blocks.push(cur);
+  return blocks;
+}
+
+function parsePSRNText(fullText){
+  const lines=fullText.split(/\r?\n/);
+  const program=extractProgramFromPSRNLines(lines);
+  const blocks=segmentPSRNBlocks(lines);
+  const out=[];
+  for(const b of blocks){
+    const parsed=parsePSRNSummaryLine(b.summaryLine);
+    if(!parsed)continue;
+    const fullBlockText=[b.summaryLine,...b.extra].join(' ');
+    const remarks=classifyRemarks(fullBlockText,parsed.remarksTail);
+    const pk=programKey(program);
+    for(const p of parsed.pairs){
+      out.push({
+        id:parsed.regNo,name:parsed.name,father:'',program,
+        course:p.code,courseName:courseNameLookup(pk,p.code),grade:p.grade,
+        ch:'',semester:'',
+        totalCH:parsed.totalCH,chCompleted:parsed.chCompleted,chPossible:parsed.chPossible,
+        sgpa:parsed.sgpa,cgpa:parsed.cgpa,remarks
+      });
+    }
+  }
+  return out;
+}
+
+// Reconstructs visual lines from a PDF using text-item positions (y-band clustering, x-sort within
+// each band). This is more robust than raw stream order because it doesn't depend on how the PDF
+// generator emitted text runs.
+async function extractPdfLines(arrayBuffer){
+  if(typeof pdfjsLib==='undefined')throw new Error('PDF reader could not be loaded (network/CDN blocked). Try exporting the result sheet as Excel/CSV instead.');
+  const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  const allLines=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    const items=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(it=>it.str&&it.str.trim());
+    items.sort((a,b)=>b.y-a.y||a.x-b.x);
+    const bands=[];const TOL=2.5;
+    for(const it of items){
+      let band=bands.find(bd=>Math.abs(bd.y-it.y)<=TOL);
+      if(!band){band={y:it.y,items:[]};bands.push(band)}
+      band.items.push(it);
+    }
+    bands.sort((a,b)=>b.y-a.y);
+    for(const band of bands){
+      band.items.sort((a,b)=>a.x-b.x);
+      const text=band.items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+      if(text)allLines.push(text);
+    }
+  }
+  return allLines.join('\n');
+}
+
+function parseResultRows(headers,dataRows){
+  const idx={
+    id:headerIndex(headers,['Registration Number','Reg. No','Reg No','Registration No','Student ID']),
+    name:headerIndex(headers,['Student Name','Name']),
+    father:headerIndex(headers,['Father Name']),
+    program:headerIndex(headers,['Program','Programme','Degree']),
+    course:headerIndex(headers,['Course Code','CourseCode','Subject Code','Code']),
+    courseName:headerIndex(headers,['Course Title','Course Name']),
+    grade:headerIndex(headers,['Grade']),
+    ch:headerIndex(headers,['Credit Hours','CH','Credits']),
+    sgpa:headerIndex(headers,['SGPA']),
+    cgpa:headerIndex(headers,['CGPA']),
+    chCompleted:headerIndex(headers,['Credit Hours Completed','CH Completed','Credits Completed']),
+    chPossible:headerIndex(headers,['Total Credit Hours','Total CH','Program Credit Hours','Total Possible CH']),
+    semester:headerIndex(headers,['Semester','Sem']),
+    remarks:headerIndex(headers,['Remarks','Academic Status','Status'])
+  };
+  return dataRows.map(a=>({
+    id:idx.id>=0?String(a[idx.id]??'').trim():'',
+    name:idx.name>=0?String(a[idx.name]??'').trim():'',
+    father:idx.father>=0?String(a[idx.father]??'').trim():'',
+    program:idx.program>=0?String(a[idx.program]??'').trim():'',
+    course:idx.course>=0?String(a[idx.course]??'').trim():'',
+    courseName:idx.courseName>=0?String(a[idx.courseName]??'').trim():'',
+    grade:idx.grade>=0?String(a[idx.grade]??'').trim():'',
+    ch:idx.ch>=0?String(a[idx.ch]??'').trim():'',
+    sgpa:idx.sgpa>=0?Number(a[idx.sgpa])||0:0,
+    cgpa:idx.cgpa>=0?Number(a[idx.cgpa])||0:0,
+    totalCH:idx.ch>=0?Number(a[idx.ch])||0:0,
+    chCompleted:idx.chCompleted>=0?Number(String(a[idx.chCompleted]).split('/')[0])||0:0,
+    chPossible:idx.chPossible>=0?Number(String(a[idx.chPossible]).split('/').pop())||0:0,
+    semester:idx.semester>=0?String(a[idx.semester]??'').trim():'',
+    remarks:idx.remarks>=0?String(a[idx.remarks]??'').trim():''
+  })).filter(r=>r.id&&r.course);
+}
+
+function parseResultDelimited(text){
+  text=String(text).replace(/^\uFEFF/,'');
+  const lines=text.split(/\r?\n/).filter(x=>x.trim()!=='');
+  if(!lines.length)return[];
+  const delim=(lines[0].match(/\t/g)||[]).length>(lines[0].match(/,/g)||[]).length?'\t':',';
+  function split(s){let a=[],cur='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){cur+='"';i++}else q=!q}else if(c===delim&&!q){a.push(cur);cur=''}else cur+=c}a.push(cur);return a.map(x=>x.trim())}
+  return parseResultRows(split(lines[0]),lines.slice(1).map(split));
+}
+
+function parseResultExcelArrayBuffer(buf){
+  if(typeof XLSX==='undefined')throw new Error('Excel reader could not be loaded.');
+  const wb=XLSX.read(buf,{type:'array',cellDates:false,raw:false});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+  if(!rows.length)return[];
+  let hi=0,best=-1;
+  for(let i=0;i<Math.min(rows.length,25);i++){
+    const h=rows[i].map(v=>String(v??''));
+    const score=['Registration Number','Course Code','Grade'].reduce((n,a)=>n+(headerIndex(h,[a])>=0?1:0),0);
+    if(score>best){best=score;hi=i}
+  }
+  return parseResultRows(rows[hi].map(v=>String(v??'')),rows.slice(hi+1));
+}
+
+async function readResultFile(file){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='pdf'){
+    const buf=await file.arrayBuffer();
+    const text=await extractPdfLines(buf);
+    const rows=parsePSRNText(text);
+    if(!rows.length)throw new Error('No student result rows could be recognized in this PDF. If the layout differs from the standard PSRN, try exporting as Excel/CSV instead.');
+    return rows;
+  }
+  if(ext==='xls'||ext==='xlsx'){
+    const buf=await file.arrayBuffer();
+    return parseResultExcelArrayBuffer(buf);
+  }
+  const text=await file.text();
+  return parseResultDelimited(text);
+}
+
+function resultKeyOf(r){return[String(r.id||'').trim().toUpperCase(),String(r.name||'').trim().toUpperCase()].join('|')}
+
+function resultGroups(){
+  const map=new Map();
+  for(const r of resultRecords){
+    const k=resultKeyOf(r);
+    if(!map.has(k))map.set(k,{key:k,id:r.id,name:r.name,father:r.father,programRaw:r.program,rows:[]});
+    map.get(k).rows.push(r);
+  }
+  const out=[];
+  for(const g of map.values()){
+    // Result/PSRN data follows the same strict whitelist. Never infer a
+    // missing program from course codes.
+    g.program=programKey(g.programRaw);
+    if(!ALLOWED_PROGRAMS.has(g.program))continue;
+    g.series=inferSeriesFromId(g.id);
+    g.plan=getPlan(g.program,g.series,g.rows.map(r=>({course:r.course})));
+    const meta=g.rows.find(r=>r.sgpa||r.cgpa)||g.rows[0];
+    g.totalCH=meta?.totalCH||0;
+    g.chCompleted=meta?.chCompleted||0;
+    g.chPossible=meta?.chPossible||0;
+    g.sgpa=meta?.sgpa||0;
+    g.cgpa=meta?.cgpa||0;
+    g.remarks=meta?.remarks||'';
+    out.push(g);
+  }
+  return out.sort((a,b)=>(a.id||'').localeCompare(b.id||'',undefined,{numeric:true}));
+}
+
+function filteredResultStudents(){
+  const gs=resultGroups().filter(g=>g.program===activeProgram);
+  const q=norm($('studentSearch').value),sf=$('seriesFilter').value;
+  return gs.filter(g=>(!q||norm(g.id).includes(q)||norm(g.name).includes(q)||norm(g.series).includes(q))&&(!sf||g.series===sf));
+}
+
+function remarksClass(remarks){
+  if(/completed|promoted/i.test(remarks))return'ok';
+  if(/probation/i.test(remarks))return'nc';
+  if(/relegat|withdrawn/i.test(remarks))return'extra';
+  return'';
+}
+
+function resultSummaryStats(gs){
+  const total=gs.length;
+  const counts={Completed:0,Promoted:0,Probation:0,Relegated:0,'Withdrawn From Program':0,'Withdrawn From All Courses':0};
+  for(const g of gs){
+    const r=g.remarks||'';
+    if(/completed/i.test(r))counts.Completed++;
+    else if(/promoted/i.test(r))counts.Promoted++;
+    else if(/probation/i.test(r))counts.Probation++;
+    else if(/relegat/i.test(r))counts.Relegated++;
+    else if(/withdrawn.*all/i.test(r))counts['Withdrawn From All Courses']++;
+    else if(/withdrawn/i.test(r))counts['Withdrawn From Program']++;
+  }
+  return{total,counts};
+}
+
+function fmtNum(n){return typeof n==='number'?n.toFixed(2):esc(n)}
+
+function excelPSRNGroups(){
+  // Build a PSRN-shaped view directly from the uploaded enrollment/offering Excel data.
+  // Grades are intentionally zero because the source file is an offering/enrollment file.
+  return studentGroups().filter(g=>g.program===activeProgram).map(g=>({
+    ...g,
+    father:'',
+    totalCH:g.rows.reduce((n,r)=>n+(Number(r.ch)||0),0),
+    chCompleted:0,
+    chPossible:g.rows.reduce((n,r)=>n+(Number(r.ch)||0),0),
+    sgpa:0,
+    cgpa:0,
+    remarks:'Zero-grade display — enrollment/offering source'
+  }));
+}
+
+function renderExcelPSRNReport(){
+  const gs=excelPSRNGroups();
+  if(!records.length){
+    return `<div class="card empty"><h2 style="margin-top:0">PSRN Style — Excel / Zero Grades</h2><p>Upload the Student Enrollment / Offering Excel file first.</p><p>This tab will reproduce the Excel data in PSRN-style format, assign <b>0</b> as the display grade for every course, and calculate <b>NC</b> against the applicable Plan of Study.</p></div>`;
+  }
+  if(!gs.length){
+    return `<div class="card empty"><h2 style="margin-top:0">PSRN Style — Excel / Zero Grades</h2><p>No BBA, BS-AF, BS-BAP or BS-FinTech students were found in the uploaded Excel data.</p></div>`;
+  }
+  let html=`<div class="card note"><b>Source:</b> Uploaded Student Enrollment / Offering Excel file. <b>Grades are displayed as 0 intentionally</b> because this source does not contain result grades. This report is only a PSRN-style presentation for checking offered courses and identifying NCs. The uploaded PSRN is not used to fill grades in this tab.</div>`;
+  html+=`<div class="card"><div class="section-title"><div><h2 style="margin:0">PSRN Style — Excel Data / Zero Grades</h2><div class="muted">${gs.length} student(s) in ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}. Courses are fetched from the uploaded Excel file.</div></div><div class="row-actions"><button class="btn secondary" id="exportExcelPsrnBtn">Download This PSRN-style Report</button></div></div>`;
+  html+='<div style="overflow:auto"><table><thead><tr><th>S.No</th><th>Reg. No</th><th>Student Name</th><th>Semester</th><th>Courses — Status / Code : Grade 0</th><th>Total CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
+  gs.forEach((g,i)=>{
+    const courses=g.rows.filter(r=>r.course).map(r=>{
+      const st=resultCoursePlanStatus(g,r);
+      const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`;
+      return `<b>${statusLabel}</b> ${esc(r.course)} : <b>0</b>${r.courseName?` — ${esc(r.courseName)}`:''}${r.ch?` (${esc(r.ch)} CH)`:''}`;
+    }).join('<br>');
+    const semesters=[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', ');
+    html+=`<tr><td>${i+1}</td><td>${esc(g.id)}</td><td>${esc(g.name)}</td><td>${esc(semesters)}</td><td>${courses||'—'}</td><td>${esc(g.totalCH)}</td><td>0/${esc(g.chPossible)}</td><td>0.00</td><td>0.00</td><td>${esc(g.remarks)}</td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  const ncRows=[];
+  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  html+=`<div class="card ncBox"><h3>Plan Courses Not Offered (NC) — ${ncRows.length} course(s)</h3>`;
+  html+=ncRows.length
+    ? `<div style="overflow:auto"><table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))))}</td><td>${esc(x.c.sem)}</td><td class="course-code">${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="empty">No NC entries detected from the uploaded Excel courses using the applicable Plan of Study.</div>';
+  html+='</div>';
+  return html;
+}
+
+function exportExcelPSRNReport(){
+  const gs=excelPSRNGroups();
+  if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
+  let html=`<!doctype html><html><head><meta charset="utf-8"><title>DSU PSRN Style — Excel / Zero Grades</title><style>
+  @page{size:A4 landscape;margin:12mm}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:24px}
+  h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 14px}
+  table{border-collapse:collapse;width:100%;margin-bottom:16px}th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f0f0f0}
+  .nc{color:#b00000;font-weight:800}.ok{color:#147a3d;font-weight:700}.note{padding:8px;border:1px solid #ccc;margin-bottom:14px}
+  .page-break{break-before:page;page-break-before:always}.nc-count{display:inline-block;padding:5px 10px;border:2px solid #b00000;background:#ffe5e5;color:#b00000;font-size:15px;font-weight:800;border-radius:4px}
+  .student-summary{border:1px solid #777;margin:0 0 16px;padding:10px;break-inside:avoid;page-break-inside:avoid}.student-summary h3{margin:0 0 8px;font-size:14px}
+  .nc-course{margin:4px 0;padding:5px 7px;border-left:4px solid #b00000;background:#fff5f5}.muted{color:#555}
+  </style></head><body>`;
+  html+=`<h1>DHA Suffa University</h1><h2>Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</h2><div class="note">Source: Uploaded Student Enrollment / Offering Excel file. Grades are displayed as 0 for presentation only. Each course is explicitly tagged: <b>(NC)</b> = course is not in the student's applicable Plan of Study; <b>(IN PLAN)</b> = course is in the plan; elective statuses identify approved elective matches. No result grades are inferred from the uploaded PSRN.</div>`;
+  html+='<table><thead><tr><th>S.No</th><th>Reg. No</th><th>Student Name</th><th>Semester</th><th>Courses — Status / Code : Grade</th><th>Total CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
+  gs.forEach((g,i)=>{
+    const courses=g.rows.filter(r=>r.course).map(r=>{
+      const st=resultCoursePlanStatus(g,r);
+      const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`;
+      return `<b class="${st.status==='NC'?'nc':'ok'}">${statusLabel}</b> ${esc(r.course)} : 0${r.courseName?` — ${esc(r.courseName)}`:''}${r.ch?` (${esc(r.ch)} CH)`:''}`;
+    }).join('<br>');
+    const semesters=[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', ');
+    html+=`<tr><td>${i+1}</td><td>${esc(g.id)}</td><td>${esc(g.name)}</td><td>${esc(semesters)}</td><td>${courses||'—'}</td><td>${esc(g.totalCH)}</td><td>0/${esc(g.chPossible)}</td><td>0.00</td><td>0.00</td><td>${esc(g.remarks)}</td></tr>`;
+  });
+  html+='</tbody></table>';
+
+  // PAGE 2: dedicated student-wise NC summary. NC here means an offered/recorded
+  // course that is NOT in the student's applicable Plan of Study. This is distinct
+  // from "Plan Courses Not Offered", which is the reverse condition.
+  html+='<div class="page-break"></div>';
+  html+=`<h1>NC Summary Report</h1><h2>Courses Recorded in Excel but Not in the Student's Applicable Plan of Study</h2><div class="note">This second page summarizes only course-level <b>(NC)</b> findings from the Excel/zero-grade report. The NC count is calculated from the same Plan of Study matching used on page 1. Each student is identified by name and registration number, and the NC courses are listed with their course names and credit hours.</div>`;
+  let totalNC=0;
+  gs.forEach((g,i)=>{
+    const ncCourses=g.rows.filter(r=>r.course).map(r=>({r,st:resultCoursePlanStatus(g,r)})).filter(x=>x.st.status==='NC');
+    totalNC+=ncCourses.length;
+    html+=`<div class="student-summary"><h3>${esc(g.name)} <span class="muted">— ${esc(g.id)}</span></h3><div style="margin-bottom:8px"><span class="nc-count">${ncCourses.length} NC${ncCourses.length===1?'':'s'}</span> <span class="muted">&nbsp; Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)} &nbsp; Series: ${esc(g.series||'')}</span></div>`;
+    if(ncCourses.length){
+      html+='<div><b>NC Courses:</b></div>';
+      html+=ncCourses.map(x=>`<div class="nc-course"><b>(NC) ${esc(x.r.course)}</b>${x.r.courseName?` — ${esc(x.r.courseName)}`:''}${x.r.semester?` <span class="muted">(Semester ${esc(x.r.semester)})</span>`:''}${x.r.ch?` <span class="muted">— ${esc(x.r.ch)} CH</span>`:''}</div>`).join('');
+    }else{
+      html+='<div class="ok"><b>0 NC</b> — All recorded courses are in the applicable Plan of Study or an approved elective category.</div>';
+    }
+    html+='</div>';
+  });
+  html+=`<div style="margin-top:12px;padding:9px;border:2px solid #b00000;font-weight:800">Total NC Findings Across Students: ${totalNC}</div>`;
+
+  // Optional reverse NC table retained below the student-wise summary for audit completeness.
+  const missingPlanRows=[]; for(const g of gs) for(const c of resultNCForStudent(g)) missingPlanRows.push({g,c});
+  html+='<h2 style="margin-top:22px">Plan Courses Not Offered (NC) — Reverse Check</h2>';
+  html+=missingPlanRows.length?`<table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${missingPlanRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(x.c.sem)}</td><td>${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td class="nc">NC</td></tr>`).join('')}</tbody></table>`:'<p>No missing required plan courses detected.</p>';
+  html+='</body></html>';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.html`;a.click();
+}
+
+function renderResultReport(){
+  const gs=filteredResultStudents();
+  if(!gs.length)return'<div class="card empty">No PSRN/result data has been uploaded for this program yet. Upload the PSRN above to populate this report.</div>';
+  const{total,counts}=resultSummaryStats(gs);
+  const pct=n=>total?((n/total)*100).toFixed(0)+'%':'0%';
+  let html=`<div class="card note"><b>PSRN Source:</b> ${esc(resultSource)}. The course list below is taken from the PSRN. Each PSRN course is checked against the student's applicable Plan of Study. The status is printed <b>directly before each course</b>: <b>(NC)</b> = the course is not in the student's Plan of Study; <b>IN PLAN</b> = the course is in the plan; elective statuses identify approved elective matches.</div>`;
+  html+='<div class="card"><table><thead><tr><th>Reg. No</th><th>Name (Father Name)</th><th>Courses Offered / Recorded (Code : Grade)</th><th>CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
+  for(const g of gs){
+    const courses=g.rows.map(r=>{const st=resultCoursePlanStatus(g,r); const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`; return `<span class="${st.cls}"><b>${statusLabel}</b> ${esc(r.course)}:${esc(r.grade)}${r.courseName?` — ${esc(r.courseName)}`:''}</span>`}).join('<br>');
+    html+=`<tr><td>${esc(g.id)}</td><td>${esc(g.name)}${g.father?` (${esc(g.father)})`:''}</td><td>${courses}</td><td>${esc(g.totalCH)}</td><td>${esc(g.chCompleted)}/${esc(g.chPossible)}</td><td>${fmtNum(g.sgpa)}</td><td>${fmtNum(g.cgpa)}</td><td class="${remarksClass(g.remarks)}">${esc(g.remarks)}</td></tr>`;
+  }
+  html+='</tbody></table></div>';
+  const ncRows=[];
+  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  html+=`<div class="card ncBox"><h3>Plan Courses Not Offered (NC) — ${ncRows.length} course(s)</h3>`;
+  html+=ncRows.length
+    ? `<div style="overflow:auto"><table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))) )}</td><td>${esc(x.c.sem)}</td><td class="course-code">${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="empty">No NC entries detected from the uploaded PSRN using the applicable Plan of Study.</div>';
+  html+='</div>';
+  html+=`<div class="card meta" style="margin-top:12px"><b>Total Enrolled ${total}</b><br>Completed ${counts.Completed} (${pct(counts.Completed)}) &middot; Promoted ${counts.Promoted} (${pct(counts.Promoted)}) &middot; Probation ${counts.Probation} (${pct(counts.Probation)}) &middot; Relegated ${counts.Relegated} (${pct(counts.Relegated)}) &middot; Withdrawn From Program ${counts['Withdrawn From Program']} (${pct(counts['Withdrawn From Program'])}) &middot; Withdrawn From All Courses ${counts['Withdrawn From All Courses']} (${pct(counts['Withdrawn From All Courses'])})</div>`;
+  return html;
+}
+
+function exportResultCSV(){
+  const gs=resultGroups();
+  if(!gs.length){alert('No result data loaded yet.');return}
+  const header=['Registration Number','Student Name','Father Name','Program','Series','Courses (Code:Grade)','Total CH','CH Completed','CH Possible','SGPA','CGPA','Remarks'];
+  const esc2=v=>{const s=String(v??'');return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const lines=[header.join(',')];
+  for(const g of gs){
+    const courses=g.rows.map(r=>`${r.course}:${r.grade}`).join('; ');
+    lines.push([g.id,g.name,g.father,g.program,g.series,courses,g.totalCH,g.chCompleted,g.chPossible,g.sgpa,g.cgpa,g.remarks].map(esc2).join(','));
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));a.download=`DSU_result_report_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+function resultReportHTML(){
+  const gs=resultGroups().filter(g=>g.program===activeProgram);
+  if(!gs.length){alert('No result data loaded for this program yet.');return}
+  const{total,counts}=resultSummaryStats(gs);
+  const pct=n=>total?((n/total)*100).toFixed(0)+'%':'0%';
+  let html=`<!doctype html><html><head><meta charset="utf-8"><title>PSRN Report</title><style>
+    body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:24px}
+    h1{font-size:16px;margin:0 0 2px}
+    h2{font-size:13px;margin:0 0 14px;font-weight:normal}
+    table{border-collapse:collapse;width:100%;margin-bottom:16px}
+    th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top}
+    th{background:#f0f0f0}
+    .summary td{border:none;padding:2px 12px 2px 0}
+  </style></head><body>`;
+  html+=`<h1>DHA Suffa University</h1><h2>Provisional Semester Result Notification (PSRN) &mdash; Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</h2>`;
+  html+='<table><thead><tr><th>S.No</th><th>Reg. No</th><th>Name (Father Name)</th><th>Courses — Status / Code : Grade</th><th>CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
+  gs.forEach((g,i)=>{
+    const courses=g.rows.map(r=>{const st=resultCoursePlanStatus(g,r); const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`; return `<span class="${st.cls}"><b>${statusLabel}</b> ${esc(r.course)}:${esc(r.grade)}</span>`}).join('<br>');
+    html+=`<tr><td>${i+1}</td><td>${esc(g.id)}</td><td>${esc(g.name)}${g.father?` (${esc(g.father)})`:''}</td><td>${courses}</td><td>${esc(g.totalCH)}</td><td>${esc(g.chCompleted)}/${esc(g.chPossible)}</td><td>${fmtNum(g.sgpa)}</td><td>${fmtNum(g.cgpa)}</td><td>${esc(g.remarks)}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  const courseStatusRows=[]; for(const g of gs) for(const r of g.rows){const st=resultCoursePlanStatus(g,r); if(st.status==='NC') courseStatusRows.push({g,r,st});}
+  html+=`<div style="margin:10px 0 14px;padding:8px;border:1px solid #ddd"><b>Course Plan Status:</b> <span style="color:#c62828;font-weight:700">[NC]</span> means the course recorded in the PSRN is <b>not found in the student's applicable Plan of Study</b>. [IN PLAN] means it is found in the plan; elective statuses are shown separately.</div>`;
+  html+=`<table class="summary"><tr><td><b>Total Enrolled</b></td><td>${total}</td><td></td></tr>
+    <tr><td>Completed</td><td>${counts.Completed}</td><td>${pct(counts.Completed)}</td></tr>
+    <tr><td>Promoted</td><td>${counts.Promoted}</td><td>${pct(counts.Promoted)}</td></tr>
+    <tr><td>Probation</td><td>${counts.Probation}</td><td>${pct(counts.Probation)}</td></tr>
+    <tr><td>Relegated</td><td>${counts.Relegated}</td><td>${pct(counts.Relegated)}</td></tr>
+    <tr><td>Withdrawn From Program</td><td>${counts['Withdrawn From Program']}</td><td>${pct(counts['Withdrawn From Program'])}</td></tr>
+    <tr><td>Withdrawn From All Courses</td><td>${counts['Withdrawn From All Courses']}</td><td>${pct(counts['Withdrawn From All Courses'])}</td></tr>
+    </table>`;
+  const ncRows=[];
+  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  html+=`<h2 style="margin-top:24px">Plan Courses Not Offered (NC)</h2>`;
+  html+=ncRows.length
+    ? `<table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(x.c.sem)}</td><td>${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td style="color:#c62828;font-weight:700">NC</td></tr>`).join('')}</tbody></table>`
+    : '<p>No NC entries detected from the PSRN using the applicable Plan of Study.</p>';
+  html+='</body></html>';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`DSU_PSRN_report_${activeProgram}_${new Date().toISOString().slice(0,10)}.html`;a.click();
+}
+
+$('planManagerBtn').onclick=openManager;
+$('closeManager').onclick=()=>$('manager').classList.add('hidden');
+$('planTemplateBtn').onclick=downloadPlanTemplate;
+$('downloadPlansBtn').onclick=downloadCurrentPlans;
+$('editProgram').addEventListener('change',renderCourses);
+$('editPlan').addEventListener('change',renderCourses);
+$('editSemester').addEventListener('change',renderCourses);
+$('addCourseBtn').onclick=()=>{const p=$('editProgram').value,v=$('editPlan').value,sem=$('editSemester').value;if(!PLANS[p])PLANS[p]={};if(!PLANS[p][v])PLANS[p][v]={};if(!PLANS[p][v][sem])PLANS[p][v][sem]=[];PLANS[p][v][sem].push({code:'NEW-CODE',name:'New Course',ch:3});renderCourses();render()};
+$('uploadPlanBtn').onclick=()=>$('planUploadMain').click();
+$('planUploadMain').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  try{
+    const n=await loadPlanFile(f);
+    $('manager').classList.remove('hidden');
+    renderRules();renderCourses();render();
+    const msg=document.createElement('div');msg.className='card note';
+    msg.innerHTML='<b>Plan of Study loaded:</b> '+n.toLocaleString()+' course row(s) imported from <b>'+esc(f.name)+'</b>. The uploaded plan is now used for NC and course matching.';
+    const wrap=document.querySelector('.wrap');wrap.insertBefore(msg,document.getElementById('app'));setTimeout(()=>msg.remove(),9000);
+  }catch(err){alert('Could not load the Plan of Study. '+err.message);}
+  e.target.value='';
+});
+$('planFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    if(f.name.toLowerCase().endsWith('.json')){parsePlanJSON(rd.result);showManagerMsg('Plan JSON imported.')}
+    else{const n=parsePlanDelimited(rd.result);showManagerMsg(`${n} plan course row(s) imported.`)}
+    renderRules();renderCourses();render();
+  }catch(err){showManagerMsg('Could not import plan file. Use the provided CSV/TSV template or valid JSON.')}};
+  rd.readAsText(f);
+});
+$('planPasteBtn').onclick=()=>{
+  const text=$('planPasteBox').value;
+  if(!text||!text.trim()){showManagerMsg('Paste some plan rows first (or a JSON export).');return}
+  try{
+    const t=text.trim();
+    if(t.startsWith('{')||t.startsWith('[')){parsePlanJSON(t);showManagerMsg('Pasted plan JSON imported.')}
+    else{const n=parsePlanDelimited(t);showManagerMsg(n?`${n} plan course row(s) imported from pasted text.`:'No valid rows found. Check the column order/header.')}
+    renderRules();renderCourses();render();
+  }catch(err){showManagerMsg('Could not read the pasted data. Use the CSV/TSV template format or valid JSON.')}
+};
+$('planPasteClearBtn').onclick=()=>{$('planPasteBox').value=''};
+$('exportBtn').onclick=exportReport;
+$('exportCsvBtn').onclick=exportAll;
+$('exportXlsxBtn').onclick=exportXLSX;
+$('file').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    records=await readStudentFile(f);
+    activeStudentKey=null;
+    render();
+    const msg=document.createElement('div');
+    msg.className='card note';
+    msg.innerHTML='<b>Data loaded:</b> '+records.length.toLocaleString()+' enrollment row(s) from <b>'+esc(f.name)+'</b>. Course IDs are used as the primary matching key.';
+    const wrap=document.querySelector('.wrap');
+    wrap.insertBefore(msg,document.getElementById('app'));
+    setTimeout(()=>msg.remove(),7000);
+  }catch(err){alert('Could not load the Excel/data file. '+err.message);}
+});
+['studentSearch','seriesFilter','planFilter'].forEach(id=>$(id).addEventListener('input',render));
+$('sampleBtn').onclick=sample;
+$('clearBtn').onclick=()=>{records=[];activeStudentKey=null;render()};
+$('fileResult').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    resultRecords=filterAllowedResultRecords(await readResultFile(f));
+    resultSource='Uploaded result file: '+f.name;
+    render();
+    const msg=document.createElement('div');
+    msg.className='card note';
+    msg.innerHTML='<b>Result data loaded:</b> '+resultRecords.length.toLocaleString()+' course-grade row(s) from <b>'+esc(f.name)+'</b>. Open the "Result Report" tab to review, and spot check a few students if this came from a PDF.';
+    const wrap=document.querySelector('.wrap');
+    wrap.insertBefore(msg,document.getElementById('app'));
+    setTimeout(()=>msg.remove(),9000);
+  }catch(err){alert('Could not load the result file. '+err.message);}
+});
+$('excelPsrnBtn').onclick=exportExcelPSRNReport;
+$('exportResultCsvBtn').onclick=exportResultCSV;
+$('exportResultHtmlBtn').onclick=()=>{if(!resultRecords.length){alert('Please upload a PSRN/result file first.');return;} resultReportHTML();};
+$('clearResultBtn').onclick=()=>{resultRecords=[];resultSource='No PSRN uploaded';render();}
+render();
+</script></body></html>
