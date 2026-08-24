@@ -9,6 +9,7 @@
 <div class="toolbar"><div class="drop" id="drop"><b>Upload Student Enrollment / Offering File</b><div class="small">Excel supported: .xls and .xlsx. The app automatically detects Registration Number, Student Name, Program, Class/Section, Course Code, Course Title, Credit Hours, Semester and Academic Status. CSV/TSV also supported.</div><input id="file" type="file" accept=".xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn secondary" id="sampleBtn">Download CSV Template</button><button class="btn primary" id="exportBtn">Download Offered Course Report</button><button class="btn secondary" id="exportCsvBtn">Download CSV</button><button class="btn secondary" id="exportXlsxBtn">Download Excel Report</button><button class="btn danger" id="clearBtn">Clear Data</button><button class="btn secondary" id="excelPsrnBtn">Download Excel PSRN-style Report</button><button class="btn primary" id="uploadPlanBtn">Upload Plan of Study</button><input id="planUploadMain" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.json" style="display:none"><button class="btn secondary" id="planManagerBtn">Plan & Series Manager</button></div>
 <div class="toolbar"><div class="drop" id="dropResult"><b>Upload Result / Grade Sheet (PSRN)</b><div class="small">Accepts the university's Provisional Semester Result Notification as PDF, or an Excel/CSV export with Registration Number, Course Code, Grade, SGPA, CGPA, Credit Hours Completed and Remarks columns. <b>No PSRN is preloaded.</b> Upload the PSRN PDF/Excel/CSV only when you want to use result data.</div><input id="fileResult" type="file" accept=".pdf,.xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn primary" id="exportResultCsvBtn">Download Result Report (CSV)</button><button class="btn secondary" id="exportResultHtmlBtn">Download PSRN-style Report (HTML)</button><button class="btn danger" id="clearResultBtn">Clear PSRN Data</button></div>
 <div class="card note"><b>Data Scope:</b> Only students whose uploaded Program/Degree is recognized as BBA, BS-AF, BS-BAP or BS-FinTech are displayed. All other and blank/unknown programs are excluded at import. Students from all other programs are automatically excluded from the audit.<br><br><b>Cohort tagging:</b> BBA212, BBA221, BBA222 and BS-AF 212, 221, 222 are explicitly assigned to the 2021 Roadmap. <br><br><b>Series / Plan Rules:</b> For BBA, BS-BAP and BS-AF &mdash; series <b>231, 232, 241</b> use the <b>2023</b> Plan of Study; series <b>242, 251, 252</b> use the <b>2025</b> Plan of Study; series <b>261 onward</b> use the <b>Fall 2026</b> Plan of Study. <b>BS-FinTech</b> starts from <b>FIN261</b> and follows the <b>Fall 2026</b> Plan of Study for all series. Only courses found in the uploaded enrollment/offering data are displayed in the "Offered Courses" table. Each offered course is checked against the student's applicable Plan of Study using Course ID (and Course Name as a fallback) as the matching key. <b>IN PLAN</b> = the offered course is found in the applicable plan; <b>ELECTIVE SLOT</b> = it fills an elective placeholder for that semester; <b>ELECTIVE (POOL)</b> = it matches a course from the program's official elective pool (per the Annex electives list) even though it was offered in a different semester than the plan's generic Elective-I/II slot; <b>NOT IN PLAN</b> = the offered course is not part of the applicable plan and not in its elective pool. A second table, <b>Plan Courses Not Offered (NC)</b>, lists any required (non-elective) course from the Plan of Study for a semester the student has data in, that was not found among the uploaded offered courses for that semester &mdash; these are marked <b>NC</b>. Electives are never marked NC since they are optional; a separate <b>Electives Not Offered</b> tab instead lists, informationally, which pool electives were not offered/taken by anyone currently in view.<br><br><b>Legacy series (before 231):</b> cohorts such as 201/211/212/221/222 pre-date the 2023 Plan of Study documents loaded into this app. They're automatically matched to the closest available reference &mdash; the <b>2023</b> Plan &mdash; so the audit still runs, but treat NOT-IN-PLAN / NC results for these series as indicative rather than exact.</div>
+<div class="stats" id="enrollStrength" style="margin-bottom:12px"></div>
 <div class="tabs" id="tabs"></div>
 <div class="toolbar"><input class="search" id="studentSearch" placeholder="Search student ID / name / series"><select class="select" id="seriesFilter"><option value="">All series</option></select><select class="select" id="planFilter"><option value="">All plans</option><option value="2021">2021 Roadmap Plan</option><option value="2023">2023 Plan</option><option value="2025">2025 Plan</option><option value="F26">Fall 2026 Plan</option></select><span class="muted" id="rowCount"></span></div>
 <div id="manager" class="card hidden">
@@ -221,7 +222,10 @@ function programKey(v){
     'BSACCOUNTINGFINANCE',
     'BSACCOUNTINGANDFINANCE',
     'BACHELOROFACCOUNTINGANDFINANCE',
-    'BACHELOROFACCOUNTINGFINANCE'
+    'BACHELOROFACCOUNTINGFINANCE',
+    'BACHELOROFSCIENCEINACCOUNTINGANDFINANCE',
+    'BACHELOROFSCIENCEINACCOUNTINGFINANCE',
+    'BSCACCOUNTINGANDFINANCE'
   ].includes(x)) return 'BS-AF';
 
   // BS Business Analytics / Business Analytics & Programming — explicit aliases only.
@@ -232,7 +236,11 @@ function programKey(v){
     'BSBUSINESSANALYTICSANDPROGRAMMING',
     'BSBUSINESSANALYTICSPROGRAMMING',
     'BACHELOROFBUSINESSANALYTICS',
-    'BACHELOROFBUSINESSANALYTICSANDPROGRAMMING'
+    'BACHELOROFBUSINESSANALYTICSANDPROGRAMMING',
+    'BUSINESSANALYTICSPROGRAMMING',
+    'BUSINESSANALYTICSANDPROGRAMMING',
+    'BACHELOROFSCIENCEINBUSINESSANALYTICSANDPROGRAMMING',
+    'BACHELOROFSCIENCEINBUSINESSANALYTICSPROGRAMMING'
   ].includes(x)) return 'BS-BAP';
 
   // BS FinTech — explicit aliases only.
@@ -242,7 +250,9 @@ function programKey(v){
     'BSFINTECH',
     'BSFINTECH4YEARS',
     'BSFINTECHNOLOGY',
-    'BACHELOROFFINANCIALTECHNOLOGY'
+    'BACHELOROFFINANCIALTECHNOLOGY',
+    'BACHELOROFSCIENCEINFINANCIALTECHNOLOGY',
+    'BACHELOROFSCIENCEINFINTECH'
   ].includes(x)) return 'BS-Fin';
 
   return '';
@@ -506,7 +516,19 @@ function notConducted(s){
   return nc;
 }
 
-function renderTabs(){const ps=['BBA','BS-AF','BS-BAP','BS-Fin']; $('tabs').innerHTML=ps.map(p=>`<button class="tab ${p===activeProgram?'active':''}" data-prog="${p}">${p==='BS-Fin'?'BS-FinTech':p}</button>`).join(''); $('tabs').querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setProgram(b.dataset.prog)))}
+function enrollmentStrength(){
+  const gs=studentGroups();
+  const counts={};
+  for(const p of ['BBA','BS-AF','BS-BAP','BS-Fin'])counts[p]=0;
+  for(const g of gs)if(counts[g.program]!==undefined)counts[g.program]++;
+  return counts;
+}
+function renderEnrollmentStrength(){
+  const counts=enrollmentStrength();
+  const shown=[['BBA','BBA'],['BS-AF','BS-AF'],['BS-BAP','BS-BAP']];
+  $('enrollStrength').innerHTML=shown.map(([p,label])=>`<div class="stat"><b>${counts[p]}</b><span>${esc(label)} enrolled</span></div>`).join('');
+}
+function renderTabs(){renderEnrollmentStrength(); const ps=['BBA','BS-AF','BS-BAP','BS-Fin']; $('tabs').innerHTML=ps.map(p=>`<button class="tab ${p===activeProgram?'active':''}" data-prog="${p}">${p==='BS-Fin'?'BS-FinTech':p}</button>`).join(''); $('tabs').querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setProgram(b.dataset.prog)))}
 function populateFilters(gs){const vals=[...new Set(gs.map(s=>s.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));const cur=$('seriesFilter').value;$('seriesFilter').innerHTML='<option value="">All series</option>'+vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}
 
 function filteredStudents(){
