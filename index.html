@@ -660,14 +660,24 @@ function exportElectivePoolReport(){
 function renderNCReport(ncAll){
   const rows=[];
   for(const {s,nc} of ncAll){
-    for(const c of nc) rows.push({s,c});
+    for(const c of nc){
+      // `notInPlan()` returns the original enrollment/offering record. Its fields are
+      // `course`, `courseName`, `semester`, and `ch`. Do not use `c.name` here because
+      // that is the student's name and was previously being printed as the Course Name.
+      const code=String(c.course??c.code??'').trim();
+      let name=String(c.courseName??'').trim();
+      if(!name || norm(name)===norm(s.name) || norm(name)===norm(s.id)) name=courseNameLookup(s.program,code)||'';
+      let sem=String(c.semester??c.sem??'').trim();
+      let ch=c.ch??'';
+      rows.push({s,c,code,name,sem,ch});
+    }
   }
   if(!rows.length){
-    return `<div class="card empty">No NC (plan course not offered) entries found for the students currently in view.</div>`;
+    return `<div class="card empty">No valid NC entries found for the students currently in view.</div>`;
   }
-  rows.sort((a,b)=> (a.s.name||a.s.id).localeCompare(b.s.name||b.s.id) || Number(a.c.sem)-Number(b.c.sem));
+  rows.sort((a,b)=> (a.s.name||a.s.id).localeCompare(b.s.name||b.s.id) || Number(a.sem||0)-Number(b.sem||0) || String(a.code||'').localeCompare(String(b.code||'')));
   return `<div class="card"><div class="section-title"><div><h2 style="margin:0">NC Report &mdash; ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}</h2><div class="muted">Courses actually present in the uploaded student/offering data that are not found in the student's applicable Plan of Study. Courses that were simply not offered are <b>not</b> counted as NC. ${rows.length} NC entr${rows.length===1?'y':'ies'} across ${new Set(rows.map(r=>r.s.key)).size} student(s).</div></div><div class="row-actions"><button class="btn secondary" id="exportNcBtn">Export NC List (CSV)</button></div></div>
-  <div style="overflow:auto"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${rows.map(({s,c})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.series)}</td><td>${esc(planLabel(s.plan))}</td><td>${esc(c.sem)}</td><td class="course-code">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div></div>`;
+  <div style="overflow:auto"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${rows.map(({s,code,name,sem,ch})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.series)}</td><td>${esc(planLabel(s.plan))}</td><td>${esc(sem)}</td><td class="course-code nc">${esc(code)}</td><td class="nc">${esc(name)}</td><td class="nc">${esc(ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function exportNCReport(){
