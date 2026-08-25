@@ -328,7 +328,15 @@ function getPlan(program,series,rows=[]){
   return '2023';
 }
 
-function keyOf(r){return [seriesCode(r.series||inferSeriesFromId(r.id)),String(r.id||'').trim(),String(r.name||'').trim()].join('|')}
+function keyOf(r){
+  // A student must remain one group even if the source Excel repeats, omits, or
+  // varies the Series value on individual course rows. Group primarily by the
+  // student's program + registration number; this prevents one student being
+  // split into duplicate report entries.
+  const p=programKey(r.program)||String(r.program||'').trim().toUpperCase();
+  const id=String(r.id||'').trim().toUpperCase();
+  return [p,id].join('|');
+}
 
 function parseDelimited(text){
   text=text.replace(/^\uFEFF/,'');
@@ -1296,142 +1304,68 @@ function exportExcelPSRNReportXLSX(){
 
   const wb=new ExcelJS.Workbook();
   wb.creator='DSU Plan of Study & Student Course Audit System';
-  wb.created=new Date();
-  wb.modified=new Date();
-  wb.calcProperties={fullCalcOnLoad:true,forceFullCalc:true};
+  wb.created=new Date(); wb.modified=new Date();
   const red='FFC62828', black='FF000000';
-
   const styleHeader=(row)=>{
     row.font={bold:true,color:{argb:black}};
     row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F0F0'}};
-    row.alignment={vertical:'top',wrapText:true};
+    row.alignment={vertical:'middle',horizontal:'center',wrapText:true};
   };
   const addBorders=(ws)=>ws.eachRow(row=>row.eachCell(cell=>{
-    cell.border={bottom:{style:'thin',color:{argb:'FFD9E2EC'}}};
+    cell.border={top:{style:'thin',color:{argb:'FFD9E2EC'}},bottom:{style:'thin',color:{argb:'FFD9E2EC'}},left:{style:'thin',color:{argb:'FFD9E2EC'}},right:{style:'thin',color:{argb:'FFD9E2EC'}}};
     cell.alignment=Object.assign({},cell.alignment||{},{vertical:'top',wrapText:true});
   }));
 
-  // Main PSRN-style report. NC is kept in a dedicated Status column so the
-  // workbook remains simple/robust while the NC status itself is red.
   const ws1=wb.addWorksheet('PSRN Style Report');
   ws1.columns=[
-    {header:'S.No',key:'sno',width:7},
-    {header:'Reg. No',key:'id',width:16},
-    {header:'Student Name',key:'name',width:24},
-    {header:'Semester',key:'sem',width:12},
-    {header:'Courses — Code : Grade 0',key:'courses',width:75},
-    {header:'Status',key:'status',width:14},
-    {header:'Total CH',key:'totalCH',width:10},
-    {header:'CH Completed',key:'completed',width:14},
-    {header:'SGPA',key:'sgpa',width:10},
-    {header:'CGPA',key:'cgpa',width:10},
-    {header:'Remarks',key:'remarks',width:38}
+    {header:'S.No',key:'sno',width:7},{header:'Reg. No',key:'id',width:16},{header:'Student Name',key:'name',width:28},{header:'Series',key:'series',width:12},
+    {header:'Semester',key:'sem',width:12},{header:'Course Code',key:'code',width:18},{header:'Course Name',key:'courseName',width:44},
+    {header:'Grade',key:'grade',width:9},{header:'Status',key:'status',width:14},{header:'CH',key:'ch',width:8},
+    {header:'Total CH',key:'totalCH',width:10},{header:'CH Completed',key:'completed',width:14},{header:'SGPA',key:'sgpa',width:10},{header:'CGPA',key:'cgpa',width:10},{header:'Remarks',key:'remarks',width:34}
   ];
   styleHeader(ws1.getRow(1));
 
   gs.forEach((g,i)=>{
-    const courseRows=g.rows.filter(r=>r.course).map(r=>{
-      const st=resultCoursePlanStatus(g,r);
-      return {r,status:st.status};
-    });
-    const hasNC=courseRows.some(x=>x.status==='NC');
-    const courseText=courseRows.map(x=>`${x.r.course} : 0${x.r.courseName?` — ${x.r.courseName}`:''}${x.r.ch?` (${x.r.ch} CH)`:''}`).join('\n')||'—';
-    const row=ws1.addRow({
-      sno:i+1,
-      id:g.id,
-      name:g.name,
-      sem:[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', '),
-      courses:courseText,
-      status:hasNC?'NC':'IN PLAN',
-      totalCH:g.totalCH,
-      completed:`0/${g.chPossible}`,
-      sgpa:'0.00',
-      cgpa:'0.00',
-      remarks:g.remarks||''
-    });
-    row.alignment={vertical:'top',wrapText:true};
-    if(hasNC){
-      row.getCell('status').font={bold:true,color:{argb:red}};
-    }else{
-      row.getCell('status').font={bold:true,color:{argb:'FF0F8B5F'}};
+    const courses=g.rows.filter(r=>r.course);
+    const firstRow=ws1.rowCount+1;
+    if(!courses.length){
+      ws1.addRow({sno:i+1,id:g.id,name:g.name,series:g.series||'',sem:'',code:'',courseName:'—',grade:'0',status:'—',ch:'',totalCH:g.totalCH,completed:`0/${g.chPossible}`,sgpa:'0.00',cgpa:'0.00',remarks:g.remarks||''});
+      return;
     }
-  });
-  addBorders(ws1);
-  ws1.freezePanes={ySplit:1};
-  ws1.autoFilter={from:'A1',to:'K1'};
-
-  // NC Summary
-  const ws2=wb.addWorksheet('NC Summary');
-  ws2.columns=[
-    {header:'Reg. No',key:'id',width:16},
-    {header:'Student Name',key:'name',width:24},
-    {header:'Series',key:'series',width:12},
-    {header:'NC Course Code',key:'code',width:18},
-    {header:'NC Course Name',key:'courseName',width:42},
-    {header:'Semester',key:'sem',width:12},
-    {header:'CH',key:'ch',width:8},
-    {header:'Status',key:'status',width:10}
-  ];
-  styleHeader(ws2.getRow(1));
-  ncRows.forEach(x=>{
-    const r=ws2.addRow({id:x.g.id,name:x.g.name,series:x.g.series||'',code:x.c.code,courseName:x.c.name||'',sem:x.c.sem||'',ch:x.c.ch||'',status:'NC'});
-    r.getCell('status').font={bold:true,color:{argb:red}};
-    r.getCell('code').font={bold:true,color:{argb:red}};
-  });
-  if(!ncRows.length){ws2.addRow({id:'—',name:'No NC entries detected',status:'—'});}
-  addBorders(ws2);
-  ws2.freezePanes={ySplit:1};
-
-  // Reverse-check sheet
-  const ws3=wb.addWorksheet('Plan Courses Not Offered');
-  ws3.columns=[
-    {header:'Reg. No',key:'id',width:16},
-    {header:'Student',key:'student',width:24},
-    {header:'Series',key:'series',width:12},
-    {header:'Plan',key:'plan',width:20},
-    {header:'Semester',key:'sem',width:12},
-    {header:'Course Code',key:'code',width:18},
-    {header:'Course Name',key:'courseName',width:42},
-    {header:'CH',key:'ch',width:8},
-    {header:'Status',key:'status',width:10}
-  ];
-  styleHeader(ws3.getRow(1));
-  ncRows.forEach(x=>{
-    const r=ws3.addRow({
-      id:x.g.id,
-      student:x.g.name,
-      series:x.g.series||'',
-      plan:planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))),
-      sem:x.c.sem,
-      code:x.c.code,
-      courseName:x.c.name,
-      ch:x.c.ch,
-      status:'NC'
+    courses.forEach(r=>{
+      const st=resultCoursePlanStatus(g,r); const isNC=st.status==='NC';
+      const row=ws1.addRow({sno:i+1,id:g.id,name:g.name,series:g.series||'',sem:r.semester||'',code:r.course||'',courseName:r.courseName||'',grade:'0',status:st.status||'',ch:r.ch||'',totalCH:g.totalCH,completed:`0/${g.chPossible}`,sgpa:'0.00',cgpa:'0.00',remarks:g.remarks||''});
+      row.eachCell(cell=>cell.font={...(cell.font||{}),color:{argb:isNC?red:black},bold:isNC});
+      row.getCell('status').font={bold:true,color:{argb:isNC?red:black}};
     });
-    r.getCell('status').font={bold:true,color:{argb:red}};
-    r.getCell('code').font={bold:true,color:{argb:red}};
+    const lastRow=ws1.rowCount;
+    // Merge student-level fields vertically so the student is shown once while every course remains on its own row.
+    [1,2,3,4,11,12,13,14,15].forEach(col=>{
+      if(lastRow>firstRow) ws1.mergeCells(firstRow,col,lastRow,col);
+    });
   });
+  addBorders(ws1); ws1.freezePanes={ySplit:1}; ws1.autoFilter={from:'A1',to:'O1'};
+
+  const ws2=wb.addWorksheet('NC Summary');
+  ws2.columns=[{header:'Reg. No',key:'id',width:16},{header:'Student Name',key:'name',width:28},{header:'Series',key:'series',width:12},{header:'Semester',key:'sem',width:12},{header:'NC Course Code',key:'code',width:18},{header:'NC Course Name',key:'courseName',width:44},{header:'CH',key:'ch',width:8},{header:'Status',key:'status',width:10}];
+  styleHeader(ws2.getRow(1));
+  ncRows.forEach(x=>{const r=ws2.addRow({id:x.g.id,name:x.g.name,series:x.g.series||'',sem:x.c.sem||'',code:x.c.code,courseName:x.c.name||'',ch:x.c.ch||'',status:'NC'});r.eachCell(c=>c.font={bold:true,color:{argb:red}});});
+  if(!ncRows.length)ws2.addRow({id:'—',name:'No NC entries detected',status:'—'});
+  addBorders(ws2); ws2.freezePanes={ySplit:1};
+
+  const ws3=wb.addWorksheet('Plan Courses Not Offered');
+  ws3.columns=[{header:'Reg. No',key:'id',width:16},{header:'Student',key:'student',width:28},{header:'Series',key:'series',width:12},{header:'Plan',key:'plan',width:20},{header:'Semester',key:'sem',width:12},{header:'Course Code',key:'code',width:18},{header:'Course Name',key:'courseName',width:44},{header:'CH',key:'ch',width:8},{header:'Status',key:'status',width:10}];
+  styleHeader(ws3.getRow(1));
+  ncRows.forEach(x=>{const r=ws3.addRow({id:x.g.id,student:x.g.name,series:x.g.series||'',plan:planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))),sem:x.c.sem,code:x.c.code,courseName:x.c.name,ch:x.c.ch,status:'NC'});r.eachCell(c=>c.font={bold:true,color:{argb:red}});});
   if(!ncRows.length)ws3.addRow({id:'—',student:'No missing required plan courses detected',status:'—'});
-  addBorders(ws3);
-  ws3.freezePanes={ySplit:1};
+  addBorders(ws3); ws3.freezePanes={ySplit:1};
 
   const filename=`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.xlsx`;
-  wb.xlsx.writeBuffer({useStyles:true,useSharedStrings:true})
-    .then(buf=>{
-      const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;
-      a.download=filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),3000);
-    })
-    .catch(err=>{
-      console.error(err);
-      alert('Could not generate Excel report. '+(err&&err.message?err.message:err));
-    });
+  wb.xlsx.writeBuffer({useStyles:true,useSharedStrings:true}).then(buf=>{
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+  }).catch(err=>{console.error(err);alert('Could not generate Excel report. '+(err&&err.message?err.message:err));});
 }
 
 function exportExcelPSRNReportPDF(){
@@ -1440,67 +1374,42 @@ function exportExcelPSRNReportPDF(){
   if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
   const progLabel=activeProgram==='BS-Fin'?'BS-FinTech':activeProgram;
   const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
-  const pageW=doc.internal.pageSize.getWidth();
-  const margin=28;
+  const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4',compress:true});
+  const margin=30, red=[198,40,40], black=[0,0,0];
+  doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('DHA Suffa University',margin,30);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(`PSRN — Excel Source / Zero Grades — Program: ${progLabel}`,margin,47);
+  doc.setFontSize(8.5); doc.text('Each course is a separate row. Student identification cells are grouped visually; NC course rows are red.',margin,61);
 
-  // Page 1: main PSRN-style table
-  doc.setFontSize(16);doc.text('DHA Suffa University',margin,32);
-  doc.setFontSize(11);doc.text(`Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${progLabel}`,margin,50);
-  doc.setFontSize(8.5);doc.text('Source: Uploaded Student Enrollment / Offering Excel file. Grades are displayed as 0 for presentation only. (NC) = not in the applicable Plan of Study; (IN PLAN) = in the plan.',margin,64);
-  const body1=gs.map((g,i)=>{
-    const courses=g.rows.filter(r=>r.course).map(r=>{
-      const st=resultCoursePlanStatus(g,r);
-      const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`;
-      return `${statusLabel} ${r.course} : 0${r.courseName?` — ${r.courseName}`:''}${r.ch?` (${r.ch} CH)`:''}`;
-    }).join('\n');
-    const semesters=[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', ');
-    return [i+1,g.id,g.name,semesters,courses||'—',g.totalCH,`0/${g.chPossible}`,'0.00','0.00',g.remarks];
-  });
-  doc.autoTable({
-    head:[['S.No','Reg. No','Student Name','Sem','Courses — Status / Code : Grade','Total CH','CH Done','SGPA','CGPA','Remarks']],
-    body:body1,startY:74,margin:{left:margin,right:margin},styles:{fontSize:7,cellPadding:3,valign:'top'},
-    headStyles:{fillColor:[240,240,240],textColor:20,fontStyle:'bold'},
-    columnStyles:{0:{cellWidth:24},1:{cellWidth:55},2:{cellWidth:75},3:{cellWidth:30},4:{cellWidth:'auto'},5:{cellWidth:35},6:{cellWidth:38},7:{cellWidth:28},8:{cellWidth:28},9:{cellWidth:60}},
-    didParseCell:data=>{if(data.section==='body' && typeof data.cell.raw==='string' && /\(NC\)/i.test(data.cell.raw)){data.cell.styles.textColor=[198,40,40];data.cell.styles.fontStyle='bold';}}
-  });
-
-  // Page 2: student-wise NC summary
-  doc.addPage();
-  doc.setFontSize(16);doc.text('NC Summary Report',margin,32);
-  doc.setFontSize(11);doc.text("Courses Recorded in Excel but Not in the Student's Applicable Plan of Study",margin,50);
-  doc.setFontSize(8.5);doc.text('Course-level (NC) findings per student, from the same Plan of Study matching used on page 1.',margin,64);
-  const body2=[];
-  gs.forEach(g=>{
-    if(g._ncCourses.length){
-      g._ncCourses.forEach((x,idx)=>body2.push([idx===0?g.name:'',idx===0?g.id:'',idx===0?String(g._ncCourses.length):'',`(NC) ${x.r.course}`,x.r.courseName||'',x.r.semester||'',x.r.ch||'']));
-    }else{
-      body2.push([g.name,g.id,'0','—','All recorded courses are in the applicable Plan of Study or an approved elective category.','','']);
-    }
-  });
-  doc.autoTable({
-    head:[['Student','Reg. No','NC Count','Course Code','Course Name','Semester','CH']],
-    body:body2,startY:74,margin:{left:margin,right:margin},styles:{fontSize:7.5,cellPadding:3},
-    headStyles:{fillColor:[255,229,229],textColor:[176,0,0],fontStyle:'bold'},
-    didParseCell:data=>{if(data.section==='body' && typeof data.cell.raw==='string' && /\(NC\)/i.test(data.cell.raw)){data.cell.styles.textColor=[198,40,40];data.cell.styles.fontStyle='bold';}}
-  });
-  doc.setFontSize(10);doc.text(`Total NC Findings Across Students: ${totalNC}`,margin,doc.lastAutoTable.finalY+18);
-
-  // Page 3: reverse check — plan courses not offered
-  doc.addPage();
-  doc.setFontSize(16);doc.text('Plan Courses Not Offered (NC) — Reverse Check',margin,32);
-  if(ncRows.length){
-    doc.autoTable({
-      head:[['Reg. No','Student','Series','Semester','Course Code','Course Name','CH','Status']],
-      body:ncRows.map(x=>[x.g.id,x.g.name,x.g.series||'',x.c.sem,x.c.code,x.c.name,x.c.ch,'NC']),
-      startY:48,margin:{left:margin,right:margin},styles:{fontSize:7.5,cellPadding:3},
-      headStyles:{fillColor:[240,240,240],textColor:20,fontStyle:'bold'},
-      didParseCell:data=>{if(data.section==='body' && data.column.index===7 && String(data.cell.raw||'').trim()==='NC'){data.cell.styles.textColor=[198,40,40];data.cell.styles.fontStyle='bold';}}
+  const body1=[];
+  gs.forEach((g,i)=>{
+    const courses=g.rows.filter(r=>r.course);
+    courses.forEach((r,idx)=>{
+      const st=resultCoursePlanStatus(g,r), isNC=st.status==='NC';
+      // Show student identity only on the first course row, which gives a merged-cell appearance in the PDF.
+      body1.push({row:[idx===0?i+1:'',idx===0?g.id:'',idx===0?g.name:'',idx===0?(g.series||''):'',r.semester||'',r.course||'',r.courseName||'',0,st.status||'',r.ch||'',idx===0?g.totalCH:'',idx===0?`0/${g.chPossible}`:'',idx===0?'0.00':'',idx===0?'0.00':'',idx===0?(g.remarks||''):''],nc:isNC});
     });
-  }else{
-    doc.setFontSize(10);doc.text('No missing required plan courses detected.',margin,60);
-  }
+  });
+  doc.autoTable({
+    head:[['S.No','Reg. No','Student Name','Series','Sem','Course Code','Course Name','Grade','Status','CH','Total CH','CH Done','SGPA','CGPA','Remarks']],
+    body:body1.map(x=>x.row),startY:72,margin:{left:margin,right:margin},styles:{font:'helvetica',fontSize:8.5,cellPadding:3.5,overflow:'linebreak',valign:'middle',textColor:black},
+    headStyles:{font:'helvetica',fontSize:8.5,fillColor:[235,240,245],textColor:black,fontStyle:'bold',halign:'center'},
+    alternateRowStyles:{fillColor:[255,255,255]},
+    columnStyles:{0:{cellWidth:24},1:{cellWidth:55},2:{cellWidth:85},3:{cellWidth:42},4:{cellWidth:32},5:{cellWidth:55},6:{cellWidth:110},7:{cellWidth:32},8:{cellWidth:48},9:{cellWidth:26},10:{cellWidth:40},11:{cellWidth:45},12:{cellWidth:34},13:{cellWidth:34},14:{cellWidth:70}},
+    didParseCell:data=>{if(data.section==='body' && body1[data.row.index]?.nc){data.cell.styles.textColor=red;data.cell.styles.fontStyle='bold';}}
+  });
 
+  doc.addPage();
+  doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('NC Summary Report',margin,30);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Course-level NC findings from the applicable Plan of Study.',margin,47);
+  const body2=ncRows.map(x=>[x.g.id,x.g.name,x.g.series||'',x.c.sem,x.c.code,x.c.name,x.c.ch,'NC']);
+  doc.autoTable({head:[['Reg. No','Student','Series','Semester','Course Code','Course Name','CH','Status']],body:body2,startY:60,margin:{left:margin,right:margin},styles:{font:'helvetica',fontSize:9,cellPadding:4,textColor:black,valign:'middle'},headStyles:{fillColor:[235,240,245],textColor:black,fontStyle:'bold'},columnStyles:{0:{cellWidth:65},1:{cellWidth:110},2:{cellWidth:50},3:{cellWidth:55},4:{cellWidth:70},5:{cellWidth:180},6:{cellWidth:30},7:{cellWidth:45}},didParseCell:data=>{if(data.section==='body'){data.cell.styles.textColor=red;data.cell.styles.fontStyle='bold';}}});
+  doc.setTextColor(...black); doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(`Total NC Findings Across Students: ${totalNC}`,margin,doc.lastAutoTable.finalY+20);
+
+  doc.addPage();
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('Plan Courses Not Offered (NC) — Reverse Check',margin,30);
+  if(ncRows.length){
+    doc.autoTable({head:[['Reg. No','Student','Series','Semester','Course Code','Course Name','CH','Status']],body:ncRows.map(x=>[x.g.id,x.g.name,x.g.series||'',x.c.sem,x.c.code,x.c.name,x.c.ch,'NC']),startY:48,margin:{left:margin,right:margin},styles:{font:'helvetica',fontSize:9,cellPadding:4,textColor:black,valign:'middle'},headStyles:{fillColor:[235,240,245],textColor:black,fontStyle:'bold'},columnStyles:{0:{cellWidth:65},1:{cellWidth:110},2:{cellWidth:50},3:{cellWidth:55},4:{cellWidth:70},5:{cellWidth:180},6:{cellWidth:30},7:{cellWidth:45}},didParseCell:data=>{if(data.section==='body'){data.cell.styles.textColor=red;data.cell.styles.fontStyle='bold';}}});
+  } else {doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('No missing required plan courses detected.',margin,55);}
   doc.save(`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
@@ -1508,31 +1417,30 @@ async function exportExcelPSRNReportWord(){
   if(typeof docx==='undefined'){alert('Word export library is not available.');return}
   const {gs,ncRows}=excelPSRNReportData();
   if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
-  const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,HeadingLevel,AlignmentType}=docx;
+  const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,HeadingLevel}=docx;
   const red='C62828', black='000000';
-  const p=(children)=>new Paragraph({children,spacing:{after:80}});
-  const cell=(children,bold=false)=>new TableCell({children:[new Paragraph({children,spacing:{after:0}})]});
-  const header=(texts)=>new TableRow({children:texts.map(t=>cell([new TextRun({text:t,bold:true})]))});
-  const mainRows=[header(['S.No','Reg. No','Student Name','Semester','Courses — Status / Code : Grade 0','Total CH','CH Completed','SGPA','CGPA','Remarks'])];
+  const makeCell=(text,{color=black,bold=false,vMerge=null}={})=>new TableCell({children:[new Paragraph({children:text===undefined?[]:[new TextRun({text:String(text??''),color,bold})],spacing:{after:0}})],...(vMerge?{verticalMerge:vMerge}:{})});
+  const headerRow=new TableRow({children:['S.No','Reg. No','Student Name','Series','Semester','Course Code','Course Name','Grade','Status','CH','Total CH','CH Completed','SGPA','CGPA','Remarks'].map(t=>makeCell(t,{bold:true}))});
+  const mainRows=[headerRow];
   gs.forEach((g,i)=>{
-    const courseRuns=[];
-    g.rows.filter(r=>r.course).forEach((r,idx)=>{
-      if(idx)courseRuns.push(new TextRun({text:'\n'}));
-      const st=resultCoursePlanStatus(g,r);const label=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`;
-      const pos=label.indexOf('(NC)');
-      if(pos>=0){courseRuns.push(new TextRun({text:label,color:red,bold:true}));}else courseRuns.push(new TextRun({text:label,bold:true}));
-      courseRuns.push(new TextRun({text:` ${r.course} : 0${r.courseName?` — ${r.courseName}`:''}${r.ch?` (${r.ch} CH)`:''}`,color:black}));
+    const courses=g.rows.filter(r=>r.course);
+    const list=courses.length?courses:[{course:'',courseName:'—',semester:'',ch:'',_empty:true}];
+    list.forEach((r,idx)=>{
+      const st=r._empty?{status:'—'}:resultCoursePlanStatus(g,r), isNC=st.status==='NC';
+      const first=idx===0, vm= list.length>1 ? (first?'restart':'continue') : null;
+      mainRows.push(new TableRow({children:[
+        makeCell(i+1,{vMerge:vm}), makeCell(g.id,{vMerge:vm}), makeCell(g.name,{vMerge:vm}), makeCell(g.series||'',{vMerge:vm}),
+        makeCell(r.semester||''),makeCell(r.course||''),makeCell(r.courseName||''),makeCell('0'),makeCell(st.status||'',{color:isNC?red:black,bold:isNC}),makeCell(r.ch||''),
+        makeCell(first?g.totalCH:'' ,{vMerge:vm}),makeCell(first?`0/${g.chPossible}`:'',{vMerge:vm}),makeCell(first?'0.00':'',{vMerge:vm}),makeCell(first?'0.00':'',{vMerge:vm}),makeCell(first?(g.remarks||''):'',{vMerge:vm})
+      ]}));
     });
-    mainRows.push(new TableRow({children:[
-      cell([new TextRun({text:String(i+1)})]),cell([new TextRun({text:String(g.id)})]),cell([new TextRun({text:String(g.name)})]),cell([new TextRun({text:[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', ')})]),cell(courseRuns.length?courseRuns:[new TextRun({text:'—'})]),cell([new TextRun({text:String(g.totalCH)})]),cell([new TextRun({text:`0/${g.chPossible}`})]),cell([new TextRun({text:'0.00'})]),cell([new TextRun({text:'0.00'})]),cell([new TextRun({text:String(g.remarks||'')})])
-    ]}));
   });
-  const ncTableRows=[header(['Reg. No','Student','Series','Plan','Semester','Course Code','Course Name','CH','Status'])];
-  ncRows.forEach(x=>ncTableRows.push(new TableRow({children:[cell([new TextRun({text:String(x.g.id)})]),cell([new TextRun({text:String(x.g.name)})]),cell([new TextRun({text:String(x.g.series||'')})]),cell([new TextRun({text:String(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))))} )]),cell([new TextRun({text:String(x.c.sem)})]),cell([new TextRun({text:String(x.c.code)})]),cell([new TextRun({text:String(x.c.name)})]),cell([new TextRun({text:String(x.c.ch)})]),cell([new TextRun({text:'NC',color:red,bold:true})])] })));
+  const ncTableRows=[new TableRow({children:['Reg. No','Student','Series','Plan','Semester','Course Code','Course Name','CH','Status'].map(t=>makeCell(t,{bold:true}))})];
+  ncRows.forEach(x=>ncTableRows.push(new TableRow({children:[makeCell(x.g.id),makeCell(x.g.name),makeCell(x.g.series||''),makeCell(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course}))))),makeCell(x.c.sem),makeCell(x.c.code,{color:red,bold:true}),makeCell(x.c.name,{color:red,bold:true}),makeCell(x.c.ch,{color:red,bold:true}),makeCell('NC',{color:red,bold:true})]})));
   const doc=new Document({sections:[{properties:{page:{size:{orientation:'landscape',width:15840,height:12240},margin:{top:720,bottom:720,left:720,right:720}}},children:[
     new Paragraph({text:'DHA Suffa University',heading:HeadingLevel.HEADING_1}),
     new Paragraph({text:`Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}`}),
-    new Paragraph({children:[new TextRun({text:'NC is shown in red. Grades are displayed as 0 for presentation only.',color:black})]}),
+    new Paragraph({children:[new TextRun({text:'Each student is grouped once; all courses are listed separately. NC course entries are shown in red.',color:black})]}),
     new Table({rows:mainRows,width:{size:100,type:WidthType.PERCENTAGE}}),
     new Paragraph({text:`Plan Courses Not Offered (NC) — ${ncRows.length} course(s)`,heading:HeadingLevel.HEADING_2}),
     ncRows.length?new Table({rows:ncTableRows,width:{size:100,type:WidthType.PERCENTAGE}}):new Paragraph({text:'No missing required plan courses detected.'})
@@ -1613,8 +1521,13 @@ function resultReportHTML(){
   html+=ncRows.length
     ? `<table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(x.c.sem)}</td><td>${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td style="color:#c62828;font-weight:700">NC</td></tr>`).join('')}</tbody></table>`
     : '<p>No NC entries detected from the PSRN using the applicable Plan of Study.</p>';
-  html+='</body></html>';
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`DSU_PSRN_report_${activeProgram}_${new Date().toISOString().slice(0,10)}.html`;a.click();
+  html+=`</body></html>`;
+  // The downloaded report is password-gated. This protects normal viewing of the report
+  // while leaving the main NC Resolver application completely unprotected.
+  const password='pedigree 1';
+  const safeHtml=html.replace(/`/g,'\\`').replace(/\\/g,'\\\\');
+  const locked=`<!doctype html><html><head><meta charset="utf-8"><title>Protected PSRN Report</title><style>body{font-family:Arial,Helvetica,sans-serif;background:#f4f7fb;margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh}.box{background:#fff;border:1px solid #d9e2ec;border-radius:12px;padding:28px;box-shadow:0 4px 18px rgba(0,0,0,.08);width:min(420px,90vw)}input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:7px;margin:10px 0}.btn{background:#0b70b7;color:#fff;border:0;border-radius:7px;padding:10px 16px;font-weight:700;cursor:pointer}.err{color:#c62828;font-size:13px;margin-top:8px;display:none}</style></head><body><div class="box"><h2>Protected PSRN Report</h2><p>Enter the password to view this report.</p><input id="pw" type="password" autocomplete="off"><button class="btn" onclick="unlock()">Open Report</button><div id="err" class="err">Incorrect password.</div></div><script>const P=${JSON.stringify(password)};const REPORT=${JSON.stringify(html)};function unlock(){if(document.getElementById('pw').value===P){document.open();document.write(REPORT);document.close();}else document.getElementById('err').style.display='block';}document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});<\/script></body></html>`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([locked],{type:'text/html'}));a.download=`DSU_PSRN_report_${activeProgram}_${new Date().toISOString().slice(0,10)}_Protected.html`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
 }
 
 $('planManagerBtn').onclick=openManager;
