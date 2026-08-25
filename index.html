@@ -6,7 +6,7 @@
 </style></head><body>
 <header><h1>DSU Plan of Study & Student Course Audit System</h1><p>Checks student enrolment/offering data against the applicable Plan of Study and flags courses outside the plan, and plan courses that were not offered (NC).</p></header>
 <div class="wrap">
-<div class="toolbar"><div class="drop" id="drop"><b>Upload Student Enrollment / Offering File</b><div class="small">Excel supported: .xls and .xlsx. The app automatically detects Registration Number, Student Name, Program, Class/Section, Course Code, Course Title, Credit Hours, Semester and Academic Status. CSV/TSV also supported.</div><input id="file" type="file" accept=".xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn secondary" id="sampleBtn">Download CSV Template</button><button class="btn primary" id="exportBtn">Download Offered Course Report</button><button class="btn secondary" id="exportCsvBtn">Download CSV</button><button class="btn secondary" id="exportXlsxBtn">Download Excel Report</button><button class="btn danger" id="clearBtn">Clear Data</button><button class="btn secondary" id="excelPsrnBtn">Download Excel PSRN-style Report</button><button class="btn primary" id="uploadPlanBtn">Upload Plan of Study</button><input id="planUploadMain" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.json" style="display:none"><button class="btn secondary" id="planManagerBtn">Plan & Series Manager</button></div>
+<div class="toolbar"><div class="drop" id="drop"><b>Upload Student Enrollment / Offering File</b><div class="small">Excel supported: .xls and .xlsx. The app automatically detects Registration Number, Student Name, Program, Class/Section, Course Code, Course Title, Credit Hours, Semester and Academic Status. CSV/TSV also supported.</div><input id="file" type="file" accept=".xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn secondary" id="sampleBtn">Download CSV Template</button><button class="btn primary" id="exportBtn">Download Offered Course Report</button><button class="btn secondary" id="exportCsvBtn">Download CSV</button><button class="btn secondary" id="exportXlsxBtn">Download Excel Report</button><button class="btn danger" id="clearBtn">Clear Data</button><button class="btn secondary" id="excelPsrnXlsxBtn">Download PSRN-style Report (Excel)</button><button class="btn secondary" id="excelPsrnPdfBtn">Download PSRN-style Report (PDF)</button><button class="btn secondary" id="excelPsrnWordBtn">Download PSRN-style Report (Word)</button><button class="btn primary" id="uploadPlanBtn">Upload Plan of Study</button><input id="planUploadMain" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.json" style="display:none"><button class="btn secondary" id="planManagerBtn">Plan & Series Manager</button></div>
 <div class="toolbar"><div class="drop" id="dropResult"><b>Upload Result / Grade Sheet (PSRN)</b><div class="small">Accepts the university's Provisional Semester Result Notification as PDF, or an Excel/CSV export with Registration Number, Course Code, Grade, SGPA, CGPA, Credit Hours Completed and Remarks columns. <b>No PSRN is preloaded.</b> Upload the PSRN PDF/Excel/CSV only when you want to use result data.</div><input id="fileResult" type="file" accept=".pdf,.xls,.xlsx,.csv,.tsv,.txt" style="margin-top:9px"></div><button class="btn primary" id="exportResultCsvBtn">Download Result Report (CSV)</button><button class="btn secondary" id="exportResultHtmlBtn">Download PSRN-style Report (HTML)</button><button class="btn danger" id="clearResultBtn">Clear PSRN Data</button></div>
 <div class="card note"><b>Data Scope:</b> Only students whose uploaded Program/Degree is recognized as BBA, BS-AF, BS-BAP or BS-FinTech are displayed. All other and blank/unknown programs are excluded at import. Students from all other programs are automatically excluded from the audit.<br><br><b>Cohort tagging:</b> BBA212, BBA221, BBA222 and BS-AF 212, 221, 222 are explicitly assigned to the 2021 Roadmap. <br><br><b>Series / Plan Rules:</b> For BBA, BS-BAP and BS-AF &mdash; series <b>231, 232, 241</b> use the <b>2023</b> Plan of Study; series <b>242, 251, 252</b> use the <b>2025</b> Plan of Study; series <b>261 onward</b> use the <b>Fall 2026</b> Plan of Study. <b>BS-FinTech</b> starts from <b>FIN261</b> and follows the <b>Fall 2026</b> Plan of Study for all series. Only courses found in the uploaded enrollment/offering data are displayed in the "Offered Courses" table. Each offered course is checked against the student's applicable Plan of Study using Course ID (and Course Name as a fallback) as the matching key. <b>IN PLAN</b> = the offered course is found in the applicable plan; <b>ELECTIVE SLOT</b> = it fills an elective placeholder for that semester; <b>ELECTIVE (POOL)</b> = it matches a course from the program's official elective pool (per the Annex electives list) even though it was offered in a different semester than the plan's generic Elective-I/II slot; <b>NOT IN PLAN</b> = the offered course is not part of the applicable plan and not in its elective pool. A second table, <b>Plan Courses Not Offered (NC)</b>, lists any required (non-elective) course from the Plan of Study for a semester the student has data in, that was not found among the uploaded offered courses for that semester &mdash; these are marked <b>NC</b>. Electives are never marked NC since they are optional; a separate <b>Electives Not Offered</b> tab instead lists, informationally, which pool electives were not offered/taken by anyone currently in view.<br><br><b>Legacy series (before 231):</b> cohorts such as 201/211/212/221/222 pre-date the 2023 Plan of Study documents loaded into this app. They're automatically matched to the closest available reference &mdash; the <b>2023</b> Plan &mdash; so the audit still runs, but treat NOT-IN-PLAN / NC results for these series as indicative rather than exact.</div>
 <div class="stats" id="enrollStrength" style="margin-bottom:12px"></div>
@@ -25,6 +25,10 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script>
 const PLAN_VERSIONS=['2019','2021','2023','2025','F26'];
 const PLAN_LABELS={'2019':'2019 BBA Plan (Fall-2019 onward)','2021':'2021 Roadmap Plan','2023':'2023 Plan','2025':'2025 Plan','F26':'Fall 2026 Plan'};
@@ -559,8 +563,12 @@ function render(){
   if(activeView==='excelpsrn'){
     $('app').innerHTML=renderViewTabs(0,0,0,resultCountForTab)+renderExcelPSRNReport();
     wireViewTabButtons();
-    const xp=document.getElementById('exportExcelPsrnBtn');
-    if(xp)xp.addEventListener('click',exportExcelPSRNReport);
+    const xpX=document.getElementById('exportExcelPsrnXlsxBtn');
+    if(xpX)xpX.addEventListener('click',exportExcelPSRNReportXLSX);
+    const xpP=document.getElementById('exportExcelPsrnPdfBtn');
+    if(xpP)xpP.addEventListener('click',exportExcelPSRNReportPDF);
+    const xpW=document.getElementById('exportExcelPsrnWordBtn');
+    if(xpW)xpW.addEventListener('click',exportExcelPSRNReportWord);
     return;
   }
   if(activeView==='resultreport'||(!filtered.length&&resultCountForTab)){
@@ -1242,7 +1250,7 @@ function renderExcelPSRNReport(){
     return `<div class="card empty"><h2 style="margin-top:0">PSRN Style — Excel / Zero Grades</h2><p>No BBA, BS-AF, BS-BAP or BS-FinTech students were found in the uploaded Excel data.</p></div>`;
   }
   let html=`<div class="card note"><b>Source:</b> Uploaded Student Enrollment / Offering Excel file. <b>Grades are displayed as 0 intentionally</b> because this source does not contain result grades. This report is only a PSRN-style presentation for checking offered courses and identifying NCs. The uploaded PSRN is not used to fill grades in this tab.</div>`;
-  html+=`<div class="card"><div class="section-title"><div><h2 style="margin:0">PSRN Style — Excel Data / Zero Grades</h2><div class="muted">${gs.length} student(s) in ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}. Courses are fetched from the uploaded Excel file.</div></div><div class="row-actions"><button class="btn secondary" id="exportExcelPsrnBtn">Download This PSRN-style Report</button></div></div>`;
+  html+=`<div class="card"><div class="section-title"><div><h2 style="margin:0">PSRN Style — Excel Data / Zero Grades</h2><div class="muted">${gs.length} student(s) in ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}. Courses are fetched from the uploaded Excel file.</div></div><div class="row-actions"><button class="btn secondary" id="exportExcelPsrnXlsxBtn">Download This Report (Excel)</button><button class="btn secondary" id="exportExcelPsrnPdfBtn">Download This Report (PDF)</button><button class="btn secondary" id="exportExcelPsrnWordBtn">Download This Report (Word)</button></div></div>`;
   html+='<div style="overflow:auto"><table><thead><tr><th>S.No</th><th>Reg. No</th><th>Student Name</th><th>Semester</th><th>Courses — Status / Code : Grade 0</th><th>Total CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
   gs.forEach((g,i)=>{
     const courses=g.rows.filter(r=>r.course).map(r=>{
@@ -1264,58 +1272,272 @@ function renderExcelPSRNReport(){
   return html;
 }
 
-function exportExcelPSRNReport(){
+// Shared data builder for both the real Excel (.xlsx) and real PDF exports below.
+// Returns {gs, ncRows, totalNC} where gs is the PSRN-style student group list,
+// ncRows is the flattened "Plan Courses Not Offered" reverse-check list, and
+// totalNC is the count of course-level (NC) findings across all students.
+function excelPSRNReportData(){
   const gs=excelPSRNGroups();
+  const ncRows=[];
+  let totalNC=0;
+  gs.forEach(g=>{
+    const ncCourses=g.rows.filter(r=>r.course).map(r=>({r,st:resultCoursePlanStatus(g,r)})).filter(x=>x.st.status==='NC');
+    totalNC+=ncCourses.length;
+    g._ncCourses=ncCourses;
+  });
+  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  return{gs,ncRows,totalNC};
+}
+
+function exportExcelPSRNReportXLSX(){
+  if(typeof ExcelJS==='undefined'){alert('Excel export library is not available. Please check your internet connection and try again.');return}
+  const {gs,ncRows}=excelPSRNReportData();
   if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
-  let html=`<!doctype html><html><head><meta charset="utf-8"><title>DSU PSRN Style — Excel / Zero Grades</title><style>
-  @page{size:A4 landscape;margin:12mm}
-  body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:24px}
-  h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 14px}
-  table{border-collapse:collapse;width:100%;margin-bottom:16px}th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f0f0f0}
-  .nc{color:#b00000;font-weight:800}.ok{color:#147a3d;font-weight:700}.note{padding:8px;border:1px solid #ccc;margin-bottom:14px}
-  .page-break{break-before:page;page-break-before:always}.nc-count{display:inline-block;padding:5px 10px;border:2px solid #b00000;background:#ffe5e5;color:#b00000;font-size:15px;font-weight:800;border-radius:4px}
-  .student-summary{border:1px solid #777;margin:0 0 16px;padding:10px;break-inside:avoid;page-break-inside:avoid}.student-summary h3{margin:0 0 8px;font-size:14px}
-  .nc-course{margin:4px 0;padding:5px 7px;border-left:4px solid #b00000;background:#fff5f5}.muted{color:#555}
-  </style></head><body>`;
-  html+=`<h1>DHA Suffa University</h1><h2>Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</h2><div class="note">Source: Uploaded Student Enrollment / Offering Excel file. Grades are displayed as 0 for presentation only. Each course is explicitly tagged: <b>(NC)</b> = course is not in the student's applicable Plan of Study; <b>(IN PLAN)</b> = course is in the plan; elective statuses identify approved elective matches. No result grades are inferred from the uploaded PSRN.</div>`;
-  html+='<table><thead><tr><th>S.No</th><th>Reg. No</th><th>Student Name</th><th>Semester</th><th>Courses — Status / Code : Grade</th><th>Total CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='DSU Plan of Study & Student Course Audit System';
+  wb.created=new Date();
+  wb.modified=new Date();
+  wb.calcProperties={fullCalcOnLoad:true,forceFullCalc:true};
+  const red='FFC62828', black='FF000000';
+
+  const styleHeader=(row)=>{
+    row.font={bold:true,color:{argb:black}};
+    row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F0F0'}};
+    row.alignment={vertical:'top',wrapText:true};
+  };
+  const addBorders=(ws)=>ws.eachRow(row=>row.eachCell(cell=>{
+    cell.border={bottom:{style:'thin',color:{argb:'FFD9E2EC'}}};
+    cell.alignment=Object.assign({},cell.alignment||{},{vertical:'top',wrapText:true});
+  }));
+
+  // Main PSRN-style report. NC is kept in a dedicated Status column so the
+  // workbook remains simple/robust while the NC status itself is red.
+  const ws1=wb.addWorksheet('PSRN Style Report');
+  ws1.columns=[
+    {header:'S.No',key:'sno',width:7},
+    {header:'Reg. No',key:'id',width:16},
+    {header:'Student Name',key:'name',width:24},
+    {header:'Semester',key:'sem',width:12},
+    {header:'Courses — Code : Grade 0',key:'courses',width:75},
+    {header:'Status',key:'status',width:14},
+    {header:'Total CH',key:'totalCH',width:10},
+    {header:'CH Completed',key:'completed',width:14},
+    {header:'SGPA',key:'sgpa',width:10},
+    {header:'CGPA',key:'cgpa',width:10},
+    {header:'Remarks',key:'remarks',width:38}
+  ];
+  styleHeader(ws1.getRow(1));
+
   gs.forEach((g,i)=>{
+    const courseRows=g.rows.filter(r=>r.course).map(r=>{
+      const st=resultCoursePlanStatus(g,r);
+      return {r,status:st.status};
+    });
+    const hasNC=courseRows.some(x=>x.status==='NC');
+    const courseText=courseRows.map(x=>`${x.r.course} : 0${x.r.courseName?` — ${x.r.courseName}`:''}${x.r.ch?` (${x.r.ch} CH)`:''}`).join('\n')||'—';
+    const row=ws1.addRow({
+      sno:i+1,
+      id:g.id,
+      name:g.name,
+      sem:[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', '),
+      courses:courseText,
+      status:hasNC?'NC':'IN PLAN',
+      totalCH:g.totalCH,
+      completed:`0/${g.chPossible}`,
+      sgpa:'0.00',
+      cgpa:'0.00',
+      remarks:g.remarks||''
+    });
+    row.alignment={vertical:'top',wrapText:true};
+    if(hasNC){
+      row.getCell('status').font={bold:true,color:{argb:red}};
+    }else{
+      row.getCell('status').font={bold:true,color:{argb:'FF0F8B5F'}};
+    }
+  });
+  addBorders(ws1);
+  ws1.freezePanes={ySplit:1};
+  ws1.autoFilter={from:'A1',to:'K1'};
+
+  // NC Summary
+  const ws2=wb.addWorksheet('NC Summary');
+  ws2.columns=[
+    {header:'Reg. No',key:'id',width:16},
+    {header:'Student Name',key:'name',width:24},
+    {header:'Series',key:'series',width:12},
+    {header:'NC Course Code',key:'code',width:18},
+    {header:'NC Course Name',key:'courseName',width:42},
+    {header:'Semester',key:'sem',width:12},
+    {header:'CH',key:'ch',width:8},
+    {header:'Status',key:'status',width:10}
+  ];
+  styleHeader(ws2.getRow(1));
+  ncRows.forEach(x=>{
+    const r=ws2.addRow({id:x.g.id,name:x.g.name,series:x.g.series||'',code:x.c.code,courseName:x.c.name||'',sem:x.c.sem||'',ch:x.c.ch||'',status:'NC'});
+    r.getCell('status').font={bold:true,color:{argb:red}};
+    r.getCell('code').font={bold:true,color:{argb:red}};
+  });
+  if(!ncRows.length){ws2.addRow({id:'—',name:'No NC entries detected',status:'—'});}
+  addBorders(ws2);
+  ws2.freezePanes={ySplit:1};
+
+  // Reverse-check sheet
+  const ws3=wb.addWorksheet('Plan Courses Not Offered');
+  ws3.columns=[
+    {header:'Reg. No',key:'id',width:16},
+    {header:'Student',key:'student',width:24},
+    {header:'Series',key:'series',width:12},
+    {header:'Plan',key:'plan',width:20},
+    {header:'Semester',key:'sem',width:12},
+    {header:'Course Code',key:'code',width:18},
+    {header:'Course Name',key:'courseName',width:42},
+    {header:'CH',key:'ch',width:8},
+    {header:'Status',key:'status',width:10}
+  ];
+  styleHeader(ws3.getRow(1));
+  ncRows.forEach(x=>{
+    const r=ws3.addRow({
+      id:x.g.id,
+      student:x.g.name,
+      series:x.g.series||'',
+      plan:planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))),
+      sem:x.c.sem,
+      code:x.c.code,
+      courseName:x.c.name,
+      ch:x.c.ch,
+      status:'NC'
+    });
+    r.getCell('status').font={bold:true,color:{argb:red}};
+    r.getCell('code').font={bold:true,color:{argb:red}};
+  });
+  if(!ncRows.length)ws3.addRow({id:'—',student:'No missing required plan courses detected',status:'—'});
+  addBorders(ws3);
+  ws3.freezePanes={ySplit:1};
+
+  const filename=`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  wb.xlsx.writeBuffer({useStyles:true,useSharedStrings:true})
+    .then(buf=>{
+      const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download=filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),3000);
+    })
+    .catch(err=>{
+      console.error(err);
+      alert('Could not generate Excel report. '+(err&&err.message?err.message:err));
+    });
+}
+
+function exportExcelPSRNReportPDF(){
+  if(typeof window.jspdf==='undefined'){alert('PDF export library is not available.');return}
+  const {gs,ncRows,totalNC}=excelPSRNReportData();
+  if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
+  const progLabel=activeProgram==='BS-Fin'?'BS-FinTech':activeProgram;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const pageW=doc.internal.pageSize.getWidth();
+  const margin=28;
+
+  // Page 1: main PSRN-style table
+  doc.setFontSize(16);doc.text('DHA Suffa University',margin,32);
+  doc.setFontSize(11);doc.text(`Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${progLabel}`,margin,50);
+  doc.setFontSize(8.5);doc.text('Source: Uploaded Student Enrollment / Offering Excel file. Grades are displayed as 0 for presentation only. (NC) = not in the applicable Plan of Study; (IN PLAN) = in the plan.',margin,64);
+  const body1=gs.map((g,i)=>{
     const courses=g.rows.filter(r=>r.course).map(r=>{
       const st=resultCoursePlanStatus(g,r);
       const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`;
-      return `<b class="${st.status==='NC'?'nc':'ok'}">${statusLabel}</b> ${esc(r.course)} : 0${r.courseName?` — ${esc(r.courseName)}`:''}${r.ch?` (${esc(r.ch)} CH)`:''}`;
-    }).join('<br>');
+      return `${statusLabel} ${r.course} : 0${r.courseName?` — ${r.courseName}`:''}${r.ch?` (${r.ch} CH)`:''}`;
+    }).join('\n');
     const semesters=[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', ');
-    html+=`<tr><td>${i+1}</td><td>${esc(g.id)}</td><td>${esc(g.name)}</td><td>${esc(semesters)}</td><td>${courses||'—'}</td><td>${esc(g.totalCH)}</td><td>0/${esc(g.chPossible)}</td><td>0.00</td><td>0.00</td><td>${esc(g.remarks)}</td></tr>`;
+    return [i+1,g.id,g.name,semesters,courses||'—',g.totalCH,`0/${g.chPossible}`,'0.00','0.00',g.remarks];
   });
-  html+='</tbody></table>';
+  doc.autoTable({
+    head:[['S.No','Reg. No','Student Name','Sem','Courses — Status / Code : Grade','Total CH','CH Done','SGPA','CGPA','Remarks']],
+    body:body1,startY:74,margin:{left:margin,right:margin},styles:{fontSize:7,cellPadding:3,valign:'top'},
+    headStyles:{fillColor:[240,240,240],textColor:20,fontStyle:'bold'},
+    columnStyles:{0:{cellWidth:24},1:{cellWidth:55},2:{cellWidth:75},3:{cellWidth:30},4:{cellWidth:'auto'},5:{cellWidth:35},6:{cellWidth:38},7:{cellWidth:28},8:{cellWidth:28},9:{cellWidth:60}},
+    didParseCell:data=>{if(data.section==='body' && typeof data.cell.raw==='string' && /\(NC\)/i.test(data.cell.raw)){data.cell.styles.textColor=[198,40,40];data.cell.styles.fontStyle='bold';}}
+  });
 
-  // PAGE 2: dedicated student-wise NC summary. NC here means an offered/recorded
-  // course that is NOT in the student's applicable Plan of Study. This is distinct
-  // from "Plan Courses Not Offered", which is the reverse condition.
-  html+='<div class="page-break"></div>';
-  html+=`<h1>NC Summary Report</h1><h2>Courses Recorded in Excel but Not in the Student's Applicable Plan of Study</h2><div class="note">This second page summarizes only course-level <b>(NC)</b> findings from the Excel/zero-grade report. The NC count is calculated from the same Plan of Study matching used on page 1. Each student is identified by name and registration number, and the NC courses are listed with their course names and credit hours.</div>`;
-  let totalNC=0;
-  gs.forEach((g,i)=>{
-    const ncCourses=g.rows.filter(r=>r.course).map(r=>({r,st:resultCoursePlanStatus(g,r)})).filter(x=>x.st.status==='NC');
-    totalNC+=ncCourses.length;
-    html+=`<div class="student-summary"><h3>${esc(g.name)} <span class="muted">— ${esc(g.id)}</span></h3><div style="margin-bottom:8px"><span class="nc-count">${ncCourses.length} NC${ncCourses.length===1?'':'s'}</span> <span class="muted">&nbsp; Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)} &nbsp; Series: ${esc(g.series||'')}</span></div>`;
-    if(ncCourses.length){
-      html+='<div><b>NC Courses:</b></div>';
-      html+=ncCourses.map(x=>`<div class="nc-course"><b>(NC) ${esc(x.r.course)}</b>${x.r.courseName?` — ${esc(x.r.courseName)}`:''}${x.r.semester?` <span class="muted">(Semester ${esc(x.r.semester)})</span>`:''}${x.r.ch?` <span class="muted">— ${esc(x.r.ch)} CH</span>`:''}</div>`).join('');
+  // Page 2: student-wise NC summary
+  doc.addPage();
+  doc.setFontSize(16);doc.text('NC Summary Report',margin,32);
+  doc.setFontSize(11);doc.text("Courses Recorded in Excel but Not in the Student's Applicable Plan of Study",margin,50);
+  doc.setFontSize(8.5);doc.text('Course-level (NC) findings per student, from the same Plan of Study matching used on page 1.',margin,64);
+  const body2=[];
+  gs.forEach(g=>{
+    if(g._ncCourses.length){
+      g._ncCourses.forEach((x,idx)=>body2.push([idx===0?g.name:'',idx===0?g.id:'',idx===0?String(g._ncCourses.length):'',`(NC) ${x.r.course}`,x.r.courseName||'',x.r.semester||'',x.r.ch||'']));
     }else{
-      html+='<div class="ok"><b>0 NC</b> — All recorded courses are in the applicable Plan of Study or an approved elective category.</div>';
+      body2.push([g.name,g.id,'0','—','All recorded courses are in the applicable Plan of Study or an approved elective category.','','']);
     }
-    html+='</div>';
   });
-  html+=`<div style="margin-top:12px;padding:9px;border:2px solid #b00000;font-weight:800">Total NC Findings Across Students: ${totalNC}</div>`;
+  doc.autoTable({
+    head:[['Student','Reg. No','NC Count','Course Code','Course Name','Semester','CH']],
+    body:body2,startY:74,margin:{left:margin,right:margin},styles:{fontSize:7.5,cellPadding:3},
+    headStyles:{fillColor:[255,229,229],textColor:[176,0,0],fontStyle:'bold'},
+    didParseCell:data=>{if(data.section==='body' && typeof data.cell.raw==='string' && /\(NC\)/i.test(data.cell.raw)){data.cell.styles.textColor=[198,40,40];data.cell.styles.fontStyle='bold';}}
+  });
+  doc.setFontSize(10);doc.text(`Total NC Findings Across Students: ${totalNC}`,margin,doc.lastAutoTable.finalY+18);
 
-  // Optional reverse NC table retained below the student-wise summary for audit completeness.
-  const missingPlanRows=[]; for(const g of gs) for(const c of resultNCForStudent(g)) missingPlanRows.push({g,c});
-  html+='<h2 style="margin-top:22px">Plan Courses Not Offered (NC) — Reverse Check</h2>';
-  html+=missingPlanRows.length?`<table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${missingPlanRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(x.c.sem)}</td><td>${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td class="nc">NC</td></tr>`).join('')}</tbody></table>`:'<p>No missing required plan courses detected.</p>';
-  html+='</body></html>';
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.html`;a.click();
+  // Page 3: reverse check — plan courses not offered
+  doc.addPage();
+  doc.setFontSize(16);doc.text('Plan Courses Not Offered (NC) — Reverse Check',margin,32);
+  if(ncRows.length){
+    doc.autoTable({
+      head:[['Reg. No','Student','Series','Semester','Course Code','Course Name','CH','Status']],
+      body:ncRows.map(x=>[x.g.id,x.g.name,x.g.series||'',x.c.sem,x.c.code,x.c.name,x.c.ch,'NC']),
+      startY:48,margin:{left:margin,right:margin},styles:{fontSize:7.5,cellPadding:3},
+      headStyles:{fillColor:[240,240,240],textColor:20,fontStyle:'bold'},
+      didParseCell:data=>{if(data.section==='body' && data.column.index===7 && String(data.cell.raw||'').trim()==='NC'){data.cell.styles.textColor=[198,40,40];data.cell.styles.fontStyle='bold';}}
+    });
+  }else{
+    doc.setFontSize(10);doc.text('No missing required plan courses detected.',margin,60);
+  }
+
+  doc.save(`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+async function exportExcelPSRNReportWord(){
+  if(typeof docx==='undefined'){alert('Word export library is not available.');return}
+  const {gs,ncRows}=excelPSRNReportData();
+  if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
+  const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,HeadingLevel,AlignmentType}=docx;
+  const red='C62828', black='000000';
+  const p=(children)=>new Paragraph({children,spacing:{after:80}});
+  const cell=(children,bold=false)=>new TableCell({children:[new Paragraph({children,spacing:{after:0}})]});
+  const header=(texts)=>new TableRow({children:texts.map(t=>cell([new TextRun({text:t,bold:true})]))});
+  const mainRows=[header(['S.No','Reg. No','Student Name','Semester','Courses — Status / Code : Grade 0','Total CH','CH Completed','SGPA','CGPA','Remarks'])];
+  gs.forEach((g,i)=>{
+    const courseRuns=[];
+    g.rows.filter(r=>r.course).forEach((r,idx)=>{
+      if(idx)courseRuns.push(new TextRun({text:'\n'}));
+      const st=resultCoursePlanStatus(g,r);const label=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`;
+      const pos=label.indexOf('(NC)');
+      if(pos>=0){courseRuns.push(new TextRun({text:label,color:red,bold:true}));}else courseRuns.push(new TextRun({text:label,bold:true}));
+      courseRuns.push(new TextRun({text:` ${r.course} : 0${r.courseName?` — ${r.courseName}`:''}${r.ch?` (${r.ch} CH)`:''}`,color:black}));
+    });
+    mainRows.push(new TableRow({children:[
+      cell([new TextRun({text:String(i+1)})]),cell([new TextRun({text:String(g.id)})]),cell([new TextRun({text:String(g.name)})]),cell([new TextRun({text:[...new Set(g.rows.map(r=>String(r.semester||'').trim()).filter(Boolean))].join(', ')})]),cell(courseRuns.length?courseRuns:[new TextRun({text:'—'})]),cell([new TextRun({text:String(g.totalCH)})]),cell([new TextRun({text:`0/${g.chPossible}`})]),cell([new TextRun({text:'0.00'})]),cell([new TextRun({text:'0.00'})]),cell([new TextRun({text:String(g.remarks||'')})])
+    ]}));
+  });
+  const ncTableRows=[header(['Reg. No','Student','Series','Plan','Semester','Course Code','Course Name','CH','Status'])];
+  ncRows.forEach(x=>ncTableRows.push(new TableRow({children:[cell([new TextRun({text:String(x.g.id)})]),cell([new TextRun({text:String(x.g.name)})]),cell([new TextRun({text:String(x.g.series||'')})]),cell([new TextRun({text:String(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))))} )]),cell([new TextRun({text:String(x.c.sem)})]),cell([new TextRun({text:String(x.c.code)})]),cell([new TextRun({text:String(x.c.name)})]),cell([new TextRun({text:String(x.c.ch)})]),cell([new TextRun({text:'NC',color:red,bold:true})])] })));
+  const doc=new Document({sections:[{properties:{page:{size:{orientation:'landscape',width:15840,height:12240},margin:{top:720,bottom:720,left:720,right:720}}},children:[
+    new Paragraph({text:'DHA Suffa University',heading:HeadingLevel.HEADING_1}),
+    new Paragraph({text:`Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}`}),
+    new Paragraph({children:[new TextRun({text:'NC is shown in red. Grades are displayed as 0 for presentation only.',color:black})]}),
+    new Table({rows:mainRows,width:{size:100,type:WidthType.PERCENTAGE}}),
+    new Paragraph({text:`Plan Courses Not Offered (NC) — ${ncRows.length} course(s)`,heading:HeadingLevel.HEADING_2}),
+    ncRows.length?new Table({rows:ncTableRows,width:{size:100,type:WidthType.PERCENTAGE}}):new Paragraph({text:'No missing required plan courses detected.'})
+  ]}]});
+  const blob=await Packer.toBlob(doc);const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`DSU_PSRN_style_Excel_zero_grades_${activeProgram}_${new Date().toISOString().slice(0,10)}.docx`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 function renderResultReport(){
@@ -1471,7 +1693,9 @@ $('fileResult').addEventListener('change',async e=>{
     setTimeout(()=>msg.remove(),9000);
   }catch(err){alert('Could not load the result file. '+err.message);}
 });
-$('excelPsrnBtn').onclick=exportExcelPSRNReport;
+$('excelPsrnXlsxBtn').onclick=exportExcelPSRNReportXLSX;
+$('excelPsrnPdfBtn').onclick=exportExcelPSRNReportPDF;
+$('excelPsrnWordBtn').onclick=exportExcelPSRNReportWord;
 $('exportResultCsvBtn').onclick=exportResultCSV;
 $('exportResultHtmlBtn').onclick=()=>{if(!resultRecords.length){alert('Please upload a PSRN/result file first.');return;} resultReportHTML();};
 $('clearResultBtn').onclick=()=>{resultRecords=[];resultSource='No PSRN uploaded';render();}
