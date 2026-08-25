@@ -1315,7 +1315,7 @@ function excelPSRNReportData(){
 
 function exportExcelPSRNReportXLSX(){
   if(typeof ExcelJS==='undefined'){alert('Excel export library is not available. Please check your internet connection and try again.');return}
-  const {gs,ncRows}=excelPSRNReportData();
+  const {gs,ncRows,totalNC}=excelPSRNReportData();
   if(!gs.length){alert('Upload the Student Enrollment / Offering Excel file first.');return}
 
   const wb=new ExcelJS.Workbook();
@@ -1591,4 +1591,4 @@ $('planPasteBtn').onclick=()=>{
   if(!text||!text.trim()){showManagerMsg('Paste some plan rows first (or a JSON export).');return}
   try{
     const t=text.trim();
-    if(t.startsWith('{
+    if(t.start
