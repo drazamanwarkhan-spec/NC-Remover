@@ -513,19 +513,28 @@ function electivePoolNotOffered(list,program){
 // Plan courses required for a semester the student has data in, but that were not
 // found among the student's uploaded/offered courses for that same semester -> NC.
 function notConducted(s){
-  const plan=planRows(s.program,s.plan);
-  const enrolled=s.rows.filter(r=>r.course);
-  const dataSemesters=[...new Set(enrolled.map(r=>semNum(r.semester)).filter(Boolean))];
-  const nc=[];
-  for(const sem of dataSemesters){
-    const rowsForSem=enrolled.filter(r=>semNum(r.semester)===sem);
-    const planForSem=plan.filter(c=>String(c.sem)===sem&&!isPlaceholder(c.code)&&!isIncompleteCourseId(c.code));
-    for(const c of planForSem){
-      const found=rowsForSem.some(r=>planCourseMatches(r,c));
-      if(!found) nc.push(c);
-    }
-  }
-  return nc;
+  // A course being absent from the uploaded data means it was simply not offered/taken.
+  // It is NOT an NC finding. NC is reserved for a course that is actually recorded in
+  // the uploaded data but does not belong to the student's applicable Plan of Study.
+  return [];
+}
+
+function recordedNCForStudent(g){
+  // True NC findings are course-level records present in the uploaded PSRN/enrollment
+  // data that do not match the student's applicable plan (including non-elective gaps).
+  return (g.rows||[]).filter(r=>r.course).map(r=>({r,st:resultCoursePlanStatus(g,r)}))
+    .filter(x=>x.st.status==='NC');
+}
+
+function programNCTotal(program=activeProgram){
+  const gs=studentGroups().filter(g=>g.program===program);
+  // NC = a course actually present in the uploaded student/offering data but not found
+  // in the student's applicable Plan of Study. A missing/not-offered plan course is NOT NC.
+  return gs.reduce((total,g)=>total+notInPlan(g).length,0);
+}
+function programResultNCTotal(program=activeProgram){
+  const gs=resultGroups().filter(g=>g.program===program);
+  return gs.reduce((total,g)=>total+recordedNCForStudent(g).length,0);
 }
 
 function enrollmentStrength(){
@@ -537,8 +546,8 @@ function enrollmentStrength(){
 }
 function renderEnrollmentStrength(){
   const counts=enrollmentStrength();
-  const shown=[['BBA','BBA'],['BS-AF','BS-AF'],['BS-BAP','BS-BAP']];
-  $('enrollStrength').innerHTML=shown.map(([p,label])=>`<div class="stat"><b>${counts[p]}</b><span>${esc(label)} enrolled</span></div>`).join('');
+  const shown=[['BBA','BBA'],['BS-AF','BS-AF'],['BS-BAP','BS-BAP'],['BS-Fin','BS-FinTech']];
+  $('enrollStrength').innerHTML=shown.map(([p,label])=>{const nc=programNCTotal(p);return `<div class="stat"><b>${counts[p]||0}</b><span>${esc(label)} enrolled</span><span style="display:block;margin-top:4px;color:var(--red);font-weight:800">NCs: ${nc}</span></div>`}).join('');
 }
 function renderTabs(){renderEnrollmentStrength(); const ps=['BBA','BS-AF','BS-BAP','BS-Fin']; $('tabs').innerHTML=ps.map(p=>`<button class="tab ${p===activeProgram?'active':''}" data-prog="${p}">${p==='BS-Fin'?'BS-FinTech':p}</button>`).join(''); $('tabs').querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setProgram(b.dataset.prog)))}
 function populateFilters(gs){const vals=[...new Set(gs.map(s=>s.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));const cur=$('seriesFilter').value;$('seriesFilter').innerHTML='<option value="">All series</option>'+vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}
@@ -589,8 +598,9 @@ function render(){
   if(!activeStudentKey||!filtered.some(s=>s.key===activeStudentKey))activeStudentKey=filtered[0].key;
   const s=filtered.find(x=>x.key===activeStudentKey)||filtered[0];
 
-  const ncAll=filtered.map(st=>({s:st,nc:notConducted(st)}));
+  const ncAll=filtered.map(st=>({s:st,nc:notInPlan(st)}));
   const ncTotal=ncAll.reduce((n,x)=>n+x.nc.length,0);
+  const ncBanner=`<div class="card" style="padding:12px 16px;border-left:5px solid var(--red);background:#fff"><span style="font-size:18px;font-weight:800">${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</span><span style="margin-left:18px;color:var(--red);font-size:18px;font-weight:900">Total NCs: ${ncTotal}</span><span class="muted" style="margin-left:12px">across ${filtered.length} student(s)</span></div>`;
   const nipAll=filtered.map(st=>({s:st,nip:notInPlan(st)}));
   const nipTotal=nipAll.reduce((n,x)=>n+x.nip.length,0);
   const epList=electivePoolNotOffered(filtered,activeProgram);
@@ -606,7 +616,7 @@ function render(){
     body=`<div class="grid"><div class="card student-list">${filtered.map(x=>`<div class="student ${x.key===s.key?'active':''}" data-key="${esc(x.key)}"><b>${esc(x.name||'Unnamed')}</b><div class="muted">${esc(x.id)} &middot; ${esc(x.series||'No series')} <span class="pill ${pillClass(x.plan)}">${planShort(x.plan)}</span></div></div>`).join('')}</div><div>${auditCard(s)}</div></div>`;
   }
 
-  $('app').innerHTML=renderViewTabs(ncTotal,nipTotal,epList.length,resultCountForTab)+body;
+  $('app').innerHTML=renderViewTabs(ncTotal,nipTotal,epList.length,resultCountForTab)+ncBanner+body;
 
   $('app').querySelectorAll('.student[data-key]').forEach(el=>el.addEventListener('click',()=>selectStudent(el.dataset.key)));
   wireViewTabButtons();
@@ -656,16 +666,20 @@ function renderNCReport(ncAll){
     return `<div class="card empty">No NC (plan course not offered) entries found for the students currently in view.</div>`;
   }
   rows.sort((a,b)=> (a.s.name||a.s.id).localeCompare(b.s.name||b.s.id) || Number(a.c.sem)-Number(b.c.sem));
-  return `<div class="card"><div class="section-title"><div><h2 style="margin:0">NC Report &mdash; ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}</h2><div class="muted">Plan courses required for a semester the student has data in, that were not found among the uploaded offered courses for that semester. ${rows.length} NC entr${rows.length===1?'y':'ies'} across ${new Set(rows.map(r=>r.s.key)).size} student(s).</div></div><div class="row-actions"><button class="btn secondary" id="exportNcBtn">Export NC List (CSV)</button></div></div>
-  <div style="overflow:auto"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Series</th><th>Plan</th><th>Plan Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${rows.map(({s,c})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.series)}</td><td>${esc(planLabel(s.plan))}</td><td>${esc(c.sem)}</td><td class="course-code">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div></div>`;
+  return `<div class="card"><div class="section-title"><div><h2 style="margin:0">NC Report &mdash; ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}</h2><div class="muted">Courses actually present in the uploaded student/offering data that are not found in the student's applicable Plan of Study. Courses that were simply not offered are <b>not</b> counted as NC. ${rows.length} NC entr${rows.length===1?'y':'ies'} across ${new Set(rows.map(r=>r.s.key)).size} student(s).</div></div><div class="row-actions"><button class="btn secondary" id="exportNcBtn">Export NC List (CSV)</button></div></div>
+  <div style="overflow:auto"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${rows.map(({s,c})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.series)}</td><td>${esc(planLabel(s.plan))}</td><td>${esc(c.sem)}</td><td class="course-code">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function exportNCReport(){
   const filtered=filteredStudents();
-  const rows=[['Student ID','Student Name','Program','Series','Plan','Plan Semester','Course Code','Course Name','CH','Status']];
+  const rows=[['S.No','Student ID','Student Name','Program','Series','Plan','Semester','Course Code','Course Name','CH','Status']];
+  let sno=0;
   for(const s of filtered){
-    for(const c of notConducted(s)){
-      rows.push([s.id,s.name,s.program,s.series,planLabel(s.plan),c.sem,c.code,c.name,c.ch,'NC']);
+    const ncCourses=notInPlan(s);
+    if(!ncCourses.length) continue;
+    sno++;
+    for(const c of ncCourses){
+      rows.push([sno,s.id,s.name,s.program,s.series,planLabel(s.plan),c.semester,c.course,c.courseName,c.ch,'NC']);
     }
   }
   exportCSV(rows,`${activeProgram}_NC_report.csv`);
@@ -1257,7 +1271,9 @@ function renderExcelPSRNReport(){
   if(!gs.length){
     return `<div class="card empty"><h2 style="margin-top:0">PSRN Style — Excel / Zero Grades</h2><p>No BBA, BS-AF, BS-BAP or BS-FinTech students were found in the uploaded Excel data.</p></div>`;
   }
-  let html=`<div class="card note"><b>Source:</b> Uploaded Student Enrollment / Offering Excel file. <b>Grades are displayed as 0 intentionally</b> because this source does not contain result grades. This report is only a PSRN-style presentation for checking offered courses and identifying NCs. The uploaded PSRN is not used to fill grades in this tab.</div>`;
+  const totalNC=gs.reduce((n,g)=>n+recordedNCForStudent(g).length,0);
+  let html=`<div class="card" style="padding:12px 16px;border-left:5px solid var(--red)"><span style="font-size:18px;font-weight:900;color:var(--red)">Total NCs: ${totalNC}</span><span class="muted" style="margin-left:12px">for ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</span></div>`;
+  html+=`<div class="card note"><b>Source:</b> Uploaded Student Enrollment / Offering Excel file. <b>Grades are displayed as 0 intentionally</b> because this source does not contain result grades. This report is only a PSRN-style presentation for checking offered courses and identifying NCs. The uploaded PSRN is not used to fill grades in this tab.</div>`;
   html+=`<div class="card"><div class="section-title"><div><h2 style="margin:0">PSRN Style — Excel Data / Zero Grades</h2><div class="muted">${gs.length} student(s) in ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}. Courses are fetched from the uploaded Excel file.</div></div><div class="row-actions"><button class="btn secondary" id="exportExcelPsrnXlsxBtn">Download This Report (Excel)</button><button class="btn secondary" id="exportExcelPsrnPdfBtn">Download This Report (PDF)</button><button class="btn secondary" id="exportExcelPsrnWordBtn">Download This Report (Word)</button></div></div>`;
   html+='<div style="overflow:auto"><table><thead><tr><th>S.No</th><th>Reg. No</th><th>Student Name</th><th>Semester</th><th>Courses — Status / Code : Grade 0</th><th>Total CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
   gs.forEach((g,i)=>{
@@ -1271,7 +1287,7 @@ function renderExcelPSRNReport(){
   });
   html+='</tbody></table></div></div>';
   const ncRows=[];
-  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  for(const g of gs) for(const x of recordedNCForStudent(g)) ncRows.push({g,c:x.r,st:x.st});
   html+=`<div class="card ncBox"><h3>Plan Courses Not Offered (NC) — ${ncRows.length} course(s)</h3>`;
   html+=ncRows.length
     ? `<div style="overflow:auto"><table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))))}</td><td>${esc(x.c.sem)}</td><td class="course-code">${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div>`
@@ -1293,7 +1309,7 @@ function excelPSRNReportData(){
     totalNC+=ncCourses.length;
     g._ncCourses=ncCourses;
   });
-  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  for(const g of gs) for(const x of recordedNCForStudent(g)) ncRows.push({g,c:x.r,st:x.st});
   return{gs,ncRows,totalNC};
 }
 
@@ -1317,14 +1333,20 @@ function exportExcelPSRNReportXLSX(){
   }));
 
   const ws1=wb.addWorksheet('PSRN Style Report');
+  ws1.addRow([`PSRN Style Report — ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}`]);
+  ws1.addRow([`Total NCs: ${totalNC}`]);
+  ws1.mergeCells(1,1,1,15); ws1.mergeCells(2,1,2,15);
+  ws1.getCell(2,1).font={bold:true,color:{argb:red},size:14};
+  ws1.getCell(1,1).font={bold:true,size:14,color:{argb:black}};
   ws1.columns=[
     {header:'S.No',key:'sno',width:7},{header:'Reg. No',key:'id',width:16},{header:'Student Name',key:'name',width:28},{header:'Series',key:'series',width:12},
     {header:'Semester',key:'sem',width:12},{header:'Course Code',key:'code',width:18},{header:'Course Name',key:'courseName',width:44},
     {header:'Grade',key:'grade',width:9},{header:'Status',key:'status',width:14},{header:'CH',key:'ch',width:8},
     {header:'Total CH',key:'totalCH',width:10},{header:'CH Completed',key:'completed',width:14},{header:'SGPA',key:'sgpa',width:10},{header:'CGPA',key:'cgpa',width:10},{header:'Remarks',key:'remarks',width:34}
   ];
-  styleHeader(ws1.getRow(1));
+  styleHeader(ws1.getRow(3));
 
+  // The first two rows are the report title and NC count; row 3 is the header.
   gs.forEach((g,i)=>{
     const courses=g.rows.filter(r=>r.course);
     const firstRow=ws1.rowCount+1;
@@ -1344,7 +1366,7 @@ function exportExcelPSRNReportXLSX(){
       if(lastRow>firstRow) ws1.mergeCells(firstRow,col,lastRow,col);
     });
   });
-  addBorders(ws1); ws1.freezePanes={ySplit:1}; ws1.autoFilter={from:'A1',to:'O1'};
+  addBorders(ws1); ws1.freezePanes={ySplit:3}; ws1.autoFilter={from:'A3',to:'O3'};
 
   const ws2=wb.addWorksheet('NC Summary');
   ws2.columns=[{header:'Reg. No',key:'id',width:16},{header:'Student Name',key:'name',width:28},{header:'Series',key:'series',width:12},{header:'Semester',key:'sem',width:12},{header:'NC Course Code',key:'code',width:18},{header:'NC Course Name',key:'courseName',width:44},{header:'CH',key:'ch',width:8},{header:'Status',key:'status',width:10}];
@@ -1378,7 +1400,8 @@ function exportExcelPSRNReportPDF(){
   const margin=30, red=[198,40,40], black=[0,0,0];
   doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('DHA Suffa University',margin,30);
   doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(`PSRN — Excel Source / Zero Grades — Program: ${progLabel}`,margin,47);
-  doc.setFontSize(8.5); doc.text('Each course is a separate row. Student identification cells are grouped visually; NC course rows are red.',margin,61);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...red); doc.text(`Total NCs: ${totalNC}`,margin,62);
+  doc.setTextColor(...black); doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.text('Each course is a separate row. Student identification cells are grouped visually; NC course rows are red.',margin,76);
 
   const body1=[];
   gs.forEach((g,i)=>{
@@ -1391,7 +1414,7 @@ function exportExcelPSRNReportPDF(){
   });
   doc.autoTable({
     head:[['S.No','Reg. No','Student Name','Series','Sem','Course Code','Course Name','Grade','Status','CH','Total CH','CH Done','SGPA','CGPA','Remarks']],
-    body:body1.map(x=>x.row),startY:72,margin:{left:margin,right:margin},styles:{font:'helvetica',fontSize:8.5,cellPadding:3.5,overflow:'linebreak',valign:'middle',textColor:black},
+    body:body1.map(x=>x.row),startY:88,margin:{left:margin,right:margin},styles:{font:'helvetica',fontSize:8.5,cellPadding:3.5,overflow:'linebreak',valign:'middle',textColor:black},
     headStyles:{font:'helvetica',fontSize:8.5,fillColor:[235,240,245],textColor:black,fontStyle:'bold',halign:'center'},
     alternateRowStyles:{fillColor:[255,255,255]},
     columnStyles:{0:{cellWidth:24},1:{cellWidth:55},2:{cellWidth:85},3:{cellWidth:42},4:{cellWidth:32},5:{cellWidth:55},6:{cellWidth:110},7:{cellWidth:32},8:{cellWidth:48},9:{cellWidth:26},10:{cellWidth:40},11:{cellWidth:45},12:{cellWidth:34},13:{cellWidth:34},14:{cellWidth:70}},
@@ -1440,6 +1463,7 @@ async function exportExcelPSRNReportWord(){
   const doc=new Document({sections:[{properties:{page:{size:{orientation:'landscape',width:15840,height:12240},margin:{top:720,bottom:720,left:720,right:720}}},children:[
     new Paragraph({text:'DHA Suffa University',heading:HeadingLevel.HEADING_1}),
     new Paragraph({text:`Provisional Semester Result Notification (PSRN) — Excel Source / Zero Grades — Program: ${activeProgram==='BS-Fin'?'BS-FinTech':activeProgram}`}),
+    new Paragraph({children:[new TextRun({text:`Total NCs: ${ncRows.length}`,color:red,bold:true})]}),
     new Paragraph({children:[new TextRun({text:'Each student is grouped once; all courses are listed separately. NC course entries are shown in red.',color:black})]}),
     new Table({rows:mainRows,width:{size:100,type:WidthType.PERCENTAGE}}),
     new Paragraph({text:`Plan Courses Not Offered (NC) — ${ncRows.length} course(s)`,heading:HeadingLevel.HEADING_2}),
@@ -1461,7 +1485,7 @@ function renderResultReport(){
   }
   html+='</tbody></table></div>';
   const ncRows=[];
-  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  for(const g of gs) for(const x of recordedNCForStudent(g)) ncRows.push({g,c:x.r,st:x.st});
   html+=`<div class="card ncBox"><h3>Plan Courses Not Offered (NC) — ${ncRows.length} course(s)</h3>`;
   html+=ncRows.length
     ? `<div style="overflow:auto"><table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Plan</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(planLabel(getPlan(x.g.program,x.g.series,x.g.rows.map(r=>({course:r.course})))) )}</td><td>${esc(x.c.sem)}</td><td class="course-code">${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td class="status nc">NC</td></tr>`).join('')}</tbody></table></div>`
@@ -1498,7 +1522,8 @@ function resultReportHTML(){
     th{background:#f0f0f0}
     .summary td{border:none;padding:2px 12px 2px 0}
   </style></head><body>`;
-  html+=`<h1>DHA Suffa University</h1><h2>Provisional Semester Result Notification (PSRN) &mdash; Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</h2>`;
+  const totalNC=gs.reduce((n,g)=>n+recordedNCForStudent(g).length,0);
+  html+=`<h1>DHA Suffa University</h1><h2>Provisional Semester Result Notification (PSRN) &mdash; Program: ${esc(activeProgram==='BS-Fin'?'BS-FinTech':activeProgram)}</h2><div style="margin:10px 0 14px;padding:9px 12px;border-left:5px solid #c62828;background:#fff;font-size:15px;font-weight:800;color:#c62828">Total NCs: ${totalNC}</div>`;
   html+='<table><thead><tr><th>S.No</th><th>Reg. No</th><th>Name (Father Name)</th><th>Courses — Status / Code : Grade</th><th>CH</th><th>CH Completed</th><th>SGPA</th><th>CGPA</th><th>Remarks</th></tr></thead><tbody>';
   gs.forEach((g,i)=>{
     const courses=g.rows.map(r=>{const st=resultCoursePlanStatus(g,r); const statusLabel=st.status==='NC'?'(NC)':st.status==='IN PLAN'?'(IN PLAN)':`(${st.status})`; return `<span class="${st.cls}"><b>${statusLabel}</b> ${esc(r.course)}:${esc(r.grade)}</span>`}).join('<br>');
@@ -1516,7 +1541,7 @@ function resultReportHTML(){
     <tr><td>Withdrawn From All Courses</td><td>${counts['Withdrawn From All Courses']}</td><td>${pct(counts['Withdrawn From All Courses'])}</td></tr>
     </table>`;
   const ncRows=[];
-  for(const g of gs) for(const c of resultNCForStudent(g)) ncRows.push({g,c});
+  for(const g of gs) for(const x of recordedNCForStudent(g)) ncRows.push({g,c:x.r,st:x.st});
   html+=`<h2 style="margin-top:24px">Plan Courses Not Offered (NC)</h2>`;
   html+=ncRows.length
     ? `<table><thead><tr><th>Reg. No</th><th>Student</th><th>Series</th><th>Semester</th><th>Course Code</th><th>Course Name</th><th>CH</th><th>Status</th></tr></thead><tbody>${ncRows.map(x=>`<tr><td>${esc(x.g.id)}</td><td>${esc(x.g.name)}</td><td>${esc(x.g.series)}</td><td>${esc(x.c.sem)}</td><td>${esc(x.c.code)}</td><td>${esc(x.c.name)}</td><td>${esc(x.c.ch)}</td><td style="color:#c62828;font-weight:700">NC</td></tr>`).join('')}</tbody></table>`
@@ -1566,51 +1591,4 @@ $('planPasteBtn').onclick=()=>{
   if(!text||!text.trim()){showManagerMsg('Paste some plan rows first (or a JSON export).');return}
   try{
     const t=text.trim();
-    if(t.startsWith('{')||t.startsWith('[')){parsePlanJSON(t);showManagerMsg('Pasted plan JSON imported.')}
-    else{const n=parsePlanDelimited(t);showManagerMsg(n?`${n} plan course row(s) imported from pasted text.`:'No valid rows found. Check the column order/header.')}
-    renderRules();renderCourses();render();
-  }catch(err){showManagerMsg('Could not read the pasted data. Use the CSV/TSV template format or valid JSON.')}
-};
-$('planPasteClearBtn').onclick=()=>{$('planPasteBox').value=''};
-$('exportBtn').onclick=exportReport;
-$('exportCsvBtn').onclick=exportAll;
-$('exportXlsxBtn').onclick=exportXLSX;
-$('file').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  try{
-    records=await readStudentFile(f);
-    activeStudentKey=null;
-    render();
-    const msg=document.createElement('div');
-    msg.className='card note';
-    msg.innerHTML='<b>Data loaded:</b> '+records.length.toLocaleString()+' enrollment row(s) from <b>'+esc(f.name)+'</b>. Course IDs are used as the primary matching key.';
-    const wrap=document.querySelector('.wrap');
-    wrap.insertBefore(msg,document.getElementById('app'));
-    setTimeout(()=>msg.remove(),7000);
-  }catch(err){alert('Could not load the Excel/data file. '+err.message);}
-});
-['studentSearch','seriesFilter','planFilter'].forEach(id=>$(id).addEventListener('input',render));
-$('sampleBtn').onclick=sample;
-$('clearBtn').onclick=()=>{records=[];activeStudentKey=null;render()};
-$('fileResult').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  try{
-    resultRecords=filterAllowedResultRecords(await readResultFile(f));
-    resultSource='Uploaded result file: '+f.name;
-    render();
-    const msg=document.createElement('div');
-    msg.className='card note';
-    msg.innerHTML='<b>Result data loaded:</b> '+resultRecords.length.toLocaleString()+' course-grade row(s) from <b>'+esc(f.name)+'</b>. Open the "Result Report" tab to review, and spot check a few students if this came from a PDF.';
-    const wrap=document.querySelector('.wrap');
-    wrap.insertBefore(msg,document.getElementById('app'));
-    setTimeout(()=>msg.remove(),9000);
-  }catch(err){alert('Could not load the result file. '+err.message);}
-});
-$('excelPsrnXlsxBtn').onclick=exportExcelPSRNReportXLSX;
-$('excelPsrnPdfBtn').onclick=exportExcelPSRNReportPDF;
-$('excelPsrnWordBtn').onclick=exportExcelPSRNReportWord;
-$('exportResultCsvBtn').onclick=exportResultCSV;
-$('exportResultHtmlBtn').onclick=()=>{if(!resultRecords.length){alert('Please upload a PSRN/result file first.');return;} resultReportHTML();};
-$('clearResultBtn').onclick=()=>{resultRecords=[];resultSource='No PSRN uploaded';render();}
-render();
-</script></body></html>
+    if(t.startsWith('{
