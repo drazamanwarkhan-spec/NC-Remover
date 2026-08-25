@@ -1591,4 +1591,51 @@ $('planPasteBtn').onclick=()=>{
   if(!text||!text.trim()){showManagerMsg('Paste some plan rows first (or a JSON export).');return}
   try{
     const t=text.trim();
-    if(t.start
+    if(t.startsWith('{')||t.startsWith('[')){parsePlanJSON(t);showManagerMsg('Pasted plan JSON imported.')}
+    else{const n=parsePlanDelimited(t);showManagerMsg(n?`${n} plan course row(s) imported from pasted text.`:'No valid rows found. Check the column order/header.')}
+    renderRules();renderCourses();render();
+  }catch(err){showManagerMsg('Could not read the pasted data. Use the CSV/TSV template format or valid JSON.')}
+};
+$('planPasteClearBtn').onclick=()=>{$('planPasteBox').value=''};
+$('exportBtn').onclick=exportReport;
+$('exportCsvBtn').onclick=exportAll;
+$('exportXlsxBtn').onclick=exportXLSX;
+$('file').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    records=await readStudentFile(f);
+    activeStudentKey=null;
+    render();
+    const msg=document.createElement('div');
+    msg.className='card note';
+    msg.innerHTML='<b>Data loaded:</b> '+records.length.toLocaleString()+' enrollment row(s) from <b>'+esc(f.name)+'</b>. Course IDs are used as the primary matching key.';
+    const wrap=document.querySelector('.wrap');
+    wrap.insertBefore(msg,document.getElementById('app'));
+    setTimeout(()=>msg.remove(),7000);
+  }catch(err){alert('Could not load the Excel/data file. '+err.message);}
+});
+['studentSearch','seriesFilter','planFilter'].forEach(id=>$(id).addEventListener('input',render));
+$('sampleBtn').onclick=sample;
+$('clearBtn').onclick=()=>{records=[];activeStudentKey=null;render()};
+$('fileResult').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    resultRecords=filterAllowedResultRecords(await readResultFile(f));
+    resultSource='Uploaded result file: '+f.name;
+    render();
+    const msg=document.createElement('div');
+    msg.className='card note';
+    msg.innerHTML='<b>Result data loaded:</b> '+resultRecords.length.toLocaleString()+' course-grade row(s) from <b>'+esc(f.name)+'</b>. Open the "Result Report" tab to review, and spot check a few students if this came from a PDF.';
+    const wrap=document.querySelector('.wrap');
+    wrap.insertBefore(msg,document.getElementById('app'));
+    setTimeout(()=>msg.remove(),9000);
+  }catch(err){alert('Could not load the result file. '+err.message);}
+});
+$('excelPsrnXlsxBtn').onclick=exportExcelPSRNReportXLSX;
+$('excelPsrnPdfBtn').onclick=exportExcelPSRNReportPDF;
+$('excelPsrnWordBtn').onclick=exportExcelPSRNReportWord;
+$('exportResultCsvBtn').onclick=exportResultCSV;
+$('exportResultHtmlBtn').onclick=()=>{if(!resultRecords.length){alert('Please upload a PSRN/result file first.');return;} resultReportHTML();};
+$('clearResultBtn').onclick=()=>{resultRecords=[];resultSource='No PSRN uploaded';render();}
+render();
+</script></body></html>
